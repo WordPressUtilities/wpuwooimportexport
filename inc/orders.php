@@ -1,7 +1,7 @@
 <?php
 
 /*
-* ORDERS V 0.1.0
+* ORDERS V 0.1.1
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -14,11 +14,11 @@ class WPUWooImportExport_Orders extends WPUWooImportExport {
     /* Update orders
     -------------------------- */
 
-    public function update_orders_from_datas($datas) {
+    public function update_orders_from_datas($datas = array()) {
         $this->display_table_datas($datas, array(), array(&$this, 'update_order_from_datas'));
     }
 
-    public function update_order_from_datas($data, $line) {
+    public function update_order_from_datas($data = array(), $line = array()) {
         $line['post_id'] = $data['order_id'];
         unset($data['order_id']);
 
