@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.3.0
+Version: 0.4.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -45,6 +45,7 @@ wp();
 class WPUWooImportExport {
 
     private $post_keys = array('post_title', 'post_content');
+    private $user_keys = array('user_pass', 'user_login', 'user_nicename', 'user_url', 'user_email', 'display_name', 'nickname', 'first_name', 'last_name');
 
     public function __construct() {
     }
@@ -166,6 +167,31 @@ class WPUWooImportExport {
         }
     }
 
+    /* Update user from datas
+    -------------------------- */
+
+    public function update_user_from_data($user_id, $data) {
+        $user_keys = array();
+        foreach ($data as $key => $var) {
+
+            /* Avoid user keys */
+            if (in_array($key, $this->user_keys)) {
+                $user_keys[$key] = $var;
+                continue;
+            }
+
+            /* Column is a usermeta */
+            update_user_meta($user_id, $key, $var);
+
+        }
+
+        /* If user keys are available : use them to reload content */
+        if (!empty($user_keys)) {
+            $user_keys['ID'] = $user_id;
+            wp_update_user($user_keys);
+        }
+    }
+
     /* ----------------------------------------------------------
       TEST
     ---------------------------------------------------------- */
@@ -181,6 +207,20 @@ class WPUWooImportExport {
 
         if ($post->post_type != $post_type) {
             return '/!\ Not a ' . $post_type;
+        }
+
+        return true;
+
+    }
+
+    /* Test user
+    -------------------------- */
+
+    public function test_user($id = false) {
+        $user = get_user_by('ID', $id);
+
+        if (!is_object($user)) {
+            return '/!\ Inexistant user';
         }
 
         return true;
