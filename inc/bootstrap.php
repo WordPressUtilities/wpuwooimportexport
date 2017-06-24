@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.4.0
+Version: 0.5.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -44,10 +44,153 @@ wp();
 
 class WPUWooImportExport {
 
-    private $post_keys = array('post_title', 'post_content');
-    private $user_keys = array('user_pass', 'user_login', 'user_nicename', 'user_url', 'user_email', 'display_name', 'nickname', 'first_name', 'last_name');
+    public $post_keys = array('post_title', 'post_content', 'post_type', 'post_status');
+    public $user_keys = array('user_pass', 'user_login', 'user_nicename', 'user_url', 'user_email', 'display_name', 'nickname', 'first_name', 'last_name');
 
     public function __construct() {
+    }
+
+    /* ----------------------------------------------------------
+      CREATE
+    ---------------------------------------------------------- */
+
+    /* Create a post from datas
+    -------------------------- */
+
+    public function create_post_from_data($data = array()) {
+        $post_id = false;
+        $post_obj = array();
+        foreach ($data as $key => $var) {
+            if ($key == 'metas') {
+                continue;
+            }
+            $post_obj[$key] = $var;
+        }
+
+        if (empty($post_obj)) {
+            return false;
+        }
+
+        $post_id = wp_insert_post($data);
+        if (!is_numeric($post_id)) {
+            return false;
+        }
+
+        if (isset($data['metas']) && is_array($data['metas'])) {
+            foreach ($data['metas'] as $key => $var) {
+                update_post_meta($post_id, $key, $var);
+            }
+        }
+
+        return $post_id;
+
+    }
+
+    /* ----------------------------------------------------------
+      SET
+    ---------------------------------------------------------- */
+
+    public function set_post_data_from_model($data = array(), $model = array()) {
+        if (!is_array($data)) {
+            $data = array();
+        }
+
+        if (!isset($data['metas'])) {
+            $data['metas'] = array();
+        }
+
+        /* Add missing post model items */
+        foreach ($model as $key => $var) {
+            if (isset($data[$key])) {
+                continue;
+            }
+            /* Save post key */
+            $data[$key] = $var;
+        }
+
+        $data_new = $data;
+        /* Move useless items */
+        foreach ($data_new as $key => $var) {
+            /* Not a native post key : use as meta */
+            if ($key != 'metas' && !in_array($key, $this->post_keys)) {
+                $data['metas'][$key] = $var;
+                unset($data[$key]);
+            }
+        }
+
+        foreach ($model['metas'] as $key => $var) {
+            $data['metas'][$key] = isset($data['metas'][$key]) ? $data['metas'][$key] : $var;
+        }
+
+        return $data;
+    }
+
+    /* ----------------------------------------------------------
+      UPDATE
+    ---------------------------------------------------------- */
+
+    /* Update post from datas
+    -------------------------- */
+
+    public function update_post_from_data($post_id, $data = array()) {
+
+        if (!isset($data['metas'])) {
+            $data['metas'] = array();
+        }
+
+        $post_keys = array();
+        foreach ($data as $key => $var) {
+
+            if ($key == 'metas') {
+                continue;
+            }
+
+            /* Avoid post keys */
+            if (in_array($key, $this->post_keys)) {
+                $post_keys[$key] = $var;
+                continue;
+            }
+
+            /* Column is a postmeta */
+            $data['metas'][$key] = $var;
+
+        }
+
+        /* Update metas */
+        foreach ($data['metas'] as $key => $var) {
+            update_post_meta($post_id, $key, $var);
+        }
+
+        /* If post keys are available : use them to reload content */
+        if (!empty($post_keys)) {
+            $post_keys['ID'] = $post_id;
+            wp_update_post($post_keys);
+        }
+    }
+
+    /* Update user from datas
+    -------------------------- */
+
+    public function update_user_from_data($user_id, $data) {
+        $user_keys = array();
+        foreach ($data as $key => $var) {
+
+            /* Avoid user keys */
+            if (in_array($key, $this->user_keys)) {
+                $user_keys[$key] = $var;
+                continue;
+            }
+
+            /* Column is a usermeta */
+            update_user_meta($user_id, $key, $var);
+
+        }
+
+        /* If user keys are available : use them to reload content */
+        if (!empty($user_keys)) {
+            $user_keys['ID'] = $user_id;
+            wp_update_user($user_keys);
+        }
     }
 
     /* ----------------------------------------------------------
@@ -136,60 +279,6 @@ class WPUWooImportExport {
         }
 
         return $data_lines;
-    }
-
-    /* ----------------------------------------------------------
-      UPDATE
-    ---------------------------------------------------------- */
-
-    /* Update post from datas
-    -------------------------- */
-
-    public function update_post_from_data($post_id, $data) {
-        $post_keys = array();
-        foreach ($data as $key => $var) {
-
-            /* Avoid post keys */
-            if (in_array($key, $this->post_keys)) {
-                $post_keys[$key] = $var;
-                continue;
-            }
-
-            /* Column is a postmeta */
-            update_post_meta($post_id, $key, $var);
-
-        }
-
-        /* If post keys are available : use them to reload content */
-        if (!empty($post_keys)) {
-            $post_keys['ID'] = $post_id;
-            wp_update_post($post_keys);
-        }
-    }
-
-    /* Update user from datas
-    -------------------------- */
-
-    public function update_user_from_data($user_id, $data) {
-        $user_keys = array();
-        foreach ($data as $key => $var) {
-
-            /* Avoid user keys */
-            if (in_array($key, $this->user_keys)) {
-                $user_keys[$key] = $var;
-                continue;
-            }
-
-            /* Column is a usermeta */
-            update_user_meta($user_id, $key, $var);
-
-        }
-
-        /* If user keys are available : use them to reload content */
-        if (!empty($user_keys)) {
-            $user_keys['ID'] = $user_id;
-            wp_update_user($user_keys);
-        }
     }
 
     /* ----------------------------------------------------------
