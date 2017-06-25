@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.2.0
+* PRODUCTS V 0.2.1
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -113,8 +113,6 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         if (isset($data['product_id'])) {
             unset($data['product_id']);
         }
-
-        $data = $this->set_post_data_from_model($data, $this->product_model);
 
         $this->update_post_from_data($line['post_id'], $data);
         $line['msg'] = 'Successful update';

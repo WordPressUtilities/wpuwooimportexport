@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.5.0
+Version: 0.6.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -191,6 +191,32 @@ class WPUWooImportExport {
             $user_keys['ID'] = $user_id;
             wp_update_user($user_keys);
         }
+    }
+
+    /* ----------------------------------------------------------
+      GET SETTINGS FROM CLI
+    ---------------------------------------------------------- */
+
+    public function get_settings_from_cli() {
+        $settings = array();
+        $opts = getopt('n::', array(
+            "number::",
+            "fromdate::",
+            "todate::"
+        ));
+
+        if (isset($opts['number']) && is_numeric($opts['number'])) {
+            $settings['number'] = $opts['number'];
+        }
+        if (isset($opts['fromdate']) && preg_match('/^[0-9]{4}\-[0-9]{2}\-[0-9]{2}$/isU', $opts['fromdate'])) {
+            $settings['fromdate'] = $opts['fromdate'];
+        }
+        if (isset($opts['todate']) && preg_match('/^[0-9]{4}\-[0-9]{2}\-[0-9]{2}$/isU', $opts['todate'])) {
+            $settings['todate'] = $opts['todate'];
+        }
+
+        return $settings;
+
     }
 
     /* ----------------------------------------------------------
