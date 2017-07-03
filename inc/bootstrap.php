@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.7.0
+Version: 0.8.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -270,38 +270,36 @@ class WPUWooImportExport {
       GET DATAS
     ---------------------------------------------------------- */
 
-    public function get_datas_from_csv($csv_file, $use_first_line = true) {
+    public function get_datas_from_csv($csv_file, $use_first_line = true, $delimiter = ",", $enclosure = '"') {
         if (!file_exists($csv_file)) {
             error_log('CSV File do not exists');
             return false;
         }
 
         /* Clean CSV data */
-        $raw_csv = file_get_contents($csv_file);
-        $raw_csv = trim($raw_csv);
-        $raw_csv = str_replace("\r", "\n", $raw_csv);
-        $raw_csv = str_replace("\n\n", "\n", $raw_csv);
-        $raw_csv_l = explode("\n", $raw_csv);
-
-        /* Extract line */
         $data_lines = array();
         $model_line = array();
-        foreach ($raw_csv_l as $i => $csv_line) {
-            $data_line = array();
-            $data_line_raw = explode(';', $csv_line);
-            /* First line is used as a model */
-            if ($use_first_line && $i == 0) {
-                foreach ($data_line_raw as $ii => $model_key) {
-                    $line_text = strtolower(str_replace(' ', '_', $model_key));
-                    $line_text = preg_replace('/([^a-z_]+)/', '', $line_text);
-                    $model_line[$ii] = $line_text;
+
+        if (($handle = fopen($csv_file, "r")) !== FALSE) {
+            $i = 0;
+            while (($data_line_raw = fgetcsv($handle, 5000, $delimiter, $enclosure)) !== FALSE) {
+                $data_line = array();
+                /* First line is used as a model */
+                if ($use_first_line && $i == 0) {
+                    foreach ($data_line_raw as $ii => $model_key) {
+                        $line_text = strtolower(str_replace(' ', '_', $model_key));
+                        $line_text = preg_replace('/([^a-z_]+)/', '', $line_text);
+                        $model_line[$ii] = $line_text;
+                    }
+                } else {
+                    foreach ($data_line_raw as $ii => $value) {
+                        $data_line[$model_line[$ii]] = $value;
+                    }
+                    $data_lines[] = $data_line;
                 }
-            } else {
-                foreach ($data_line_raw as $ii => $value) {
-                    $data_line[$model_line[$ii]] = $value;
-                }
-                $data_lines[] = $data_line;
+                $i++;
             }
+            fclose($handle);
         }
 
         return $data_lines;
