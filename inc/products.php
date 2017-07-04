@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.2.1
+* PRODUCTS V 0.3.0
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -55,19 +55,46 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         if (!isset($datas['order'])) {
             $datas['order'] = 'ASC';
         }
+        $load_variations = false;
+        if (isset($datas['load_variations']) && $datas['load_variations']) {
+            unset($datas['load_variations']);
+            $load_variations = true;
+        }
 
         $products = array();
         $wc_products = get_posts($datas);
 
-        foreach ($wc_products as $product) {
-            $product = array(
-                'id' => $product->ID,
-                'title' => $product->post_title
+        foreach ($wc_products as $product_post) {
+            if (!apply_filters('wpuwooimportexport_products_use_product', true, $product_post)) {
+                continue;
+            }
+
+            $product_item = array(
+                'id' => $product_post->ID,
+                'title' => $product_post->post_title,
+                'parent' => 0
             );
 
-            if (apply_filters('wpuwooimportexport_products_use_product', true, $product)) {
-                $products[] = $product;
+            $product = wc_get_product($product_post);
+            $product_item['sku'] = $product->get_sku();
+
+            if ($load_variations && $product->is_type('variable')) {
+                $variable_product = new WC_Product_Variable($product_post->ID);
+                $variations = $variable_product->get_available_variations();
+                foreach ($variations as $variation_post) {
+                    $product_var = wc_get_product($variation_post['id']);
+                    $product_item = array(
+                        'id' => $variation_post['id'],
+                        'title' => $variation_post['name'],
+                        'parent' => $product_post->ID
+                    );
+                    $product_item['sku'] = $product_var->get_sku();
+                    $products[] = $product_item;
+                }
+                continue;
             }
+
+            $products[] = $product_item;
         }
 
         return $products;
