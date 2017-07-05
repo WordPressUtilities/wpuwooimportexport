@@ -1,7 +1,7 @@
 <?php
 
 /*
-* ORDERS V 0.2.1
+* ORDERS V 0.2.2
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -52,13 +52,14 @@ class WPUWooImportExport_Orders extends WPUWooImportExport {
         $order_posts = get_posts($datas);
         $orders = array();
         foreach ($order_posts as $order_post) {
-
             $wc_order = new WC_Order($order_post->ID);
-
             $order = array(
                 'id' => $order_post->ID,
                 'date' => $order_post->post_date,
-                'total' => $wc_order->get_total()
+                'customer_id' => $wc_order->get_customer_id(),
+                'total' => $wc_order->get_total(),
+                'billing_email' => $wc_order->get_billing_email(),
+                'billing_phone' => $wc_order->get_billing_phone(),
             );
 
             if ($load_billing_address) {
@@ -98,6 +99,7 @@ class WPUWooImportExport_Orders extends WPUWooImportExport {
                         $order['line_sku'] = $product->get_sku();
                     }
                     $order['line_name'] = $item->get_name();
+                    $order['line_qty'] = $item->get_quantity();
                     $order['line_total'] = $item->get_total();
                     $order['line_total_tax'] = $item->get_total_tax();
                     $tmp_orders[] = $order;

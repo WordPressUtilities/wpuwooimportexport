@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.9.0
+Version: 0.10.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -37,6 +37,34 @@ require_once $bootstrap;
 
 /* Start WP */
 wp();
+
+/* ----------------------------------------------------------
+  Disable email
+---------------------------------------------------------- */
+
+if (!isset($keepmails)) {
+    if (!function_exists('wp_mail')) {
+        function wp_mail($to, $subject, $message, $headers = '', $attachments = array()) {
+            return true;
+        }
+    }
+
+    add_action('phpmailer_init', 'disable_phpmailer');
+    function disable_phpmailer($phpmailer) {
+        $phpmailer->ClearAllRecipients();
+    }
+
+    add_filter('wp_mail', 'disable_wpmail');
+    function disable_wpmail($args) {
+        return array(
+            'to' => 'no-reply@example.com',
+            'subject' => $args['subject'],
+            'message' => $args['message'],
+            'headers' => $args['headers'],
+            'attachments' => $args['attachments']
+        );
+    }
+}
 
 /* ----------------------------------------------------------
   Bootstrap class
@@ -84,6 +112,22 @@ class WPUWooImportExport {
 
         return $post_id;
 
+    }
+
+    /* Create a CSV from datas
+    -------------------------- */
+
+    public function create_csv_from_datas($datas = array(), $export_file = 'test.csv') {
+
+        $csv = $this->get_csv_from_datas($datas);
+
+        $fpc = file_put_contents($export_file, $csv);
+
+        if (count($fpc)) {
+            echo "- Export : ok in " . $export_file . "\n";
+        } else {
+            echo "- Export : failed.\n";
+        }
     }
 
     /* ----------------------------------------------------------

@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.3.0
+* PRODUCTS V 0.3.1
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -69,14 +69,16 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                 continue;
             }
 
+            $product = wc_get_product($product_post);
             $product_item = array(
                 'id' => $product_post->ID,
                 'title' => $product_post->post_title,
-                'parent' => 0
+                'parent' => 0,
+                'date' => $product_post->post_date,
+                'price' => $product->get_price(),
+                'sku' => $product->get_sku(),
+                'tax' => $product->get_tax_class(),
             );
-
-            $product = wc_get_product($product_post);
-            $product_item['sku'] = $product->get_sku();
 
             if ($load_variations && $product->is_type('variable')) {
                 $variable_product = new WC_Product_Variable($product_post->ID);
@@ -85,10 +87,14 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                     $product_var = wc_get_product($variation_post['id']);
                     $product_item = array(
                         'id' => $variation_post['id'],
-                        'title' => $variation_post['name'],
-                        'parent' => $product_post->ID
+                        'title' => $product_post->post_title . ' - ' . implode(' - ', $product_var->get_attributes()),
+                        'parent' => $product_post->ID,
+                        'date' => $variation_post['post_date'],
+                        'price' => $product_var->get_price(),
+                        'sku' => $product_var->get_sku(),
+                        'tax' => $product_var->get_tax_class(),
+
                     );
-                    $product_item['sku'] = $product_var->get_sku();
                     $products[] = $product_item;
                 }
                 continue;
