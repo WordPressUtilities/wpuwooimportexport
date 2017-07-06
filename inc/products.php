@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.3.1
+* PRODUCTS V 0.3.2
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -73,6 +73,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
             $product_item = array(
                 'id' => $product_post->ID,
                 'title' => $product_post->post_title,
+                'attributes' => '',
                 'parent' => 0,
                 'date' => $product_post->post_date,
                 'price' => $product->get_price(),
@@ -88,6 +89,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                     $product_item = array(
                         'id' => $variation_post['id'],
                         'title' => $product_post->post_title . ' - ' . implode(' - ', $product_var->get_attributes()),
+                        'attributes' => implode('/', $product_var->get_attributes()),
                         'parent' => $product_post->ID,
                         'date' => $variation_post['post_date'],
                         'price' => $product_var->get_price(),
