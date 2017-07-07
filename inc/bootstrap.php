@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.10.2
+Version: 0.11.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -354,6 +354,35 @@ class WPUWooImportExport {
         $file_contents = str_replace("\r", "\r\n", $file_contents);
         $file_contents = str_replace("\r\n\n", "\r\n", $file_contents);
         file_put_contents($csv_file, $file_contents);
+    }
+
+    /* ----------------------------------------------------------
+      Send a file to FTP
+    ---------------------------------------------------------- */
+
+    /**
+     * Send a file to a FTP folder
+     * @param  string  $file       Local full file path.
+     * @param  string  $remotefile Remote full file path.
+     * @param  string  $host       FTP Host
+     * @param  string  $user       FTP User
+     * @param  string  $password   FTP Password
+     * @param  integer $port       FTP Port
+     * @return boolean             Success of the transfer
+     */
+    public function send_file_to_ftp($file, $remotefile, $host, $user, $password, $port = 21) {
+        $conn_id = ftp_connect($host, $port);
+        if (!$conn_id) {
+            return false;
+        }
+        if (!ftp_login($conn_id, $user, $password)) {
+            ftp_close($conn_id);
+            return false;
+        }
+        ftp_pasv($conn_id, true);
+        $upload = ftp_put($conn_id, $remotefile, $file, FTP_ASCII);
+        ftp_close($conn_id);
+        return $upload;
     }
 
     /* ----------------------------------------------------------
