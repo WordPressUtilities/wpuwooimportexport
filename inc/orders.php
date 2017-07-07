@@ -1,7 +1,7 @@
 <?php
 
 /*
-* ORDERS V 0.2.2
+* ORDERS V 0.2.3
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -57,10 +57,17 @@ class WPUWooImportExport_Orders extends WPUWooImportExport {
                 'id' => $order_post->ID,
                 'date' => $order_post->post_date,
                 'customer_id' => $wc_order->get_customer_id(),
+                'item_count' => $wc_order->get_item_count(),
                 'total' => $wc_order->get_total(),
+                'total_shipping' => $wc_order->get_total_shipping(),
                 'billing_email' => $wc_order->get_billing_email(),
                 'billing_phone' => $wc_order->get_billing_phone(),
+                'payment_gateway' => ''
             );
+            $payment_gateway = wc_get_payment_gateway_by_order($wc_order);
+            if (is_object($payment_gateway)) {
+                $order['payment_gateway'] = $payment_gateway->id;
+            }
 
             if ($load_billing_address) {
                 $order['billing_first_name'] = $wc_order->get_billing_first_name();
@@ -94,6 +101,7 @@ class WPUWooImportExport_Orders extends WPUWooImportExport {
                 $items = $wc_order->get_items();
                 foreach ($items as $item) {
                     $product = wc_get_product($item->get_product_id());
+                    $order['line_product_id'] = $item->get_product_id();
                     $order['line_sku'] = '';
                     if ($product) {
                         $order['line_sku'] = $product->get_sku();
