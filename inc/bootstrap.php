@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.11.1
+Version: 0.12.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -267,14 +267,16 @@ class WPUWooImportExport {
       GET CSV FROM DATAS
     ---------------------------------------------------------- */
 
-    public function get_csv_from_datas($datas = array()) {
-        /* Get columns */
-
-        $csv = implode(',', array_map(array(&$this, 'get_csv_value'), array_keys(current($datas)))) . "\n";
+    public function get_csv_from_datas($datas = array(), $delimiter = ",", $enclosure = '"') {
+        ob_start();
+        $out = fopen('php://output', 'w');
+        $columns = array_keys(current($datas));
+        fputcsv($out, $columns, $delimiter, $enclosure);
         foreach ($datas as $data) {
-            $csv .= implode(',', array_map(array(&$this, 'get_csv_value'), $data)) . "\n";
+            fputcsv($out, $data, $delimiter, $enclosure);
         }
-
+        fclose($out);
+        $csv = ob_get_clean();
         return $csv;
     }
 
