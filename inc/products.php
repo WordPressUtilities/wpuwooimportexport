@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.3.2
+* PRODUCTS V 0.3.3
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -78,6 +78,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                 'date' => $product_post->post_date,
                 'price' => $product->get_price(),
                 'sku' => $product->get_sku(),
+                'stock_status' => $product->get_stock_status(),
                 'tax' => $product->get_tax_class(),
             );
 
@@ -94,6 +95,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                         'date' => $variation_post['post_date'],
                         'price' => $product_var->get_price(),
                         'sku' => $product_var->get_sku(),
+                        'stock_status' => $product_var->get_stock_status(),
                         'tax' => $product_var->get_tax_class(),
 
                     );
