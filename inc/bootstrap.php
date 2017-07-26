@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.12.1
+Version: 0.13.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -17,7 +17,8 @@ License URI: http://opensource.org/licenses/MIT
 /* It could take a while */
 set_time_limit(0);
 ini_set('memory_limit', '1G');
-ignore_user_abort(true);
+
+// ignore_user_abort(true);
 
 /* Disable default environment */
 define('WP_USE_THEMES', false);
@@ -359,11 +360,11 @@ class WPUWooImportExport {
     }
 
     /* ----------------------------------------------------------
-      Send a file to FTP
+      FTP
     ---------------------------------------------------------- */
 
     /**
-     * Send a file to a FTP folder
+     * Send a file to an FTP folder
      * @param  string  $file       Local full file path.
      * @param  string  $remotefile Remote full file path.
      * @param  string  $host       FTP Host
@@ -385,6 +386,29 @@ class WPUWooImportExport {
         $upload = ftp_put($conn_id, $remotefile, $file, FTP_ASCII);
         ftp_close($conn_id);
         return $upload;
+    }
+
+    /**
+     * Get a file from an FTP folder
+     * @param  string  $file       Local full file path.
+     * @param  string  $remotefile Remote full file path.
+     * @param  string  $host       FTP Host
+     * @param  string  $user       FTP User
+     * @param  string  $password   FTP Password
+     * @param  integer $port       FTP Port
+     * @return boolean             Success of the transfer
+     */
+    public function get_file_from_ftp($file, $remotefile, $host, $user, $password, $port = 21) {
+        $conn_id = ftp_connect($host, $port);
+        if (!$conn_id) {
+            return false;
+        }
+        if (!ftp_login($conn_id, $user, $password)) {
+            ftp_close($conn_id);
+            return false;
+        }
+        $return = ftp_get($conn_id, $file, $remotefile, FTP_BINARY);
+        ftp_close($conn_id);
     }
 
     /* ----------------------------------------------------------
