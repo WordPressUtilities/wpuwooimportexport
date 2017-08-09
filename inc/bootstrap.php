@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.13.0
+Version: 0.13.1
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -25,6 +25,7 @@ define('WP_USE_THEMES', false);
 
 /* Load WordPress */
 /* Thanks to http://boiteaweb.fr/wordpress-bootstraps-ou-comment-bien-charger-wordpress-6717.html */
+chdir(dirname(__FILE__));
 $bootstrap = 'wp-load.php';
 while (!is_file($bootstrap)) {
     if (is_dir('..')) {
