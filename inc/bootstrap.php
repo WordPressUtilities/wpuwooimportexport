@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.13.4
+Version: 0.13.5
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -332,18 +332,24 @@ class WPUWooImportExport {
             while (($data_line_raw = fgetcsv($handle, 5000, $delimiter, $enclosure)) !== FALSE) {
                 $data_line = array();
                 /* First line is used as a model */
-                if ($use_first_line && $i == 0) {
-                    foreach ($data_line_raw as $ii => $model_key) {
-                        $line_text = strtolower(str_replace(' ', '_', $model_key));
-                        $line_text = preg_replace('/([^a-z_]+)/', '', $line_text);
-                        $model_line[$ii] = !empty($line_text) ? $line_text : 'line' . $ii;
+                if ($use_first_line) {
+                    if ($i == 0) {
+                        foreach ($data_line_raw as $ii => $model_key) {
+                            $line_text = strtolower(str_replace(' ', '_', $model_key));
+                            $line_text = preg_replace('/([^a-z_]+)/', '', $line_text);
+                            $model_line[$ii] = !empty($line_text) ? $line_text : 'line' . $ii;
+                        }
+                    } else {
+                        foreach ($data_line_raw as $ii => $value) {
+                            $data_line[$model_line[$ii]] = $value;
+                        }
                     }
                 } else {
                     foreach ($data_line_raw as $ii => $value) {
                         $data_line[$ii] = $value;
                     }
-                    $data_lines[] = $data_line;
                 }
+                $data_lines[] = $data_line;
                 $i++;
             }
             fclose($handle);
