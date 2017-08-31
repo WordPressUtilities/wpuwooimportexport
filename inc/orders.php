@@ -1,7 +1,7 @@
 <?php
 
 /*
-* ORDERS V 0.2.4
+* ORDERS V 0.2.5
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -100,17 +100,27 @@ class WPUWooImportExport_Orders extends WPUWooImportExport {
             } else {
                 $items = $wc_order->get_items();
                 foreach ($items as $item) {
-                    $product = wc_get_product($item->get_product_id());
                     $order['line_product_id'] = $item->get_product_id();
                     $order['line_variation_id'] = $item->get_variation_id();
                     $order['line_sku'] = '';
-                    if ($product) {
-                        $order['line_sku'] = $product->get_sku();
-                    }
+                    $order['line_variation_sku'] = '';
                     $order['line_name'] = $item->get_name();
                     $order['line_qty'] = $item->get_quantity();
                     $order['line_total'] = $item->get_total();
                     $order['line_total_tax'] = $item->get_total_tax();
+                    /* If existing product */
+                    $product = wc_get_product($item->get_product_id());
+                    if ($product) {
+                        $order['line_sku'] = $product->get_sku();
+                        $order['line_variation_sku'] = $product->get_sku();
+                    }
+                    /* If existing variation */
+                    if ($order['line_variation_id']) {
+                        $_product = wc_get_product($order['line_variation_id']);
+                        if ($_product) {
+                            $order['line_variation_sku'] = $_product->get_sku();
+                        }
+                    }
                     $tmp_orders[] = $order;
                 }
             }
