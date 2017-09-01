@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.13.6
+Version: 0.13.7
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -305,11 +305,9 @@ class WPUWooImportExport {
 
             $line = call_user_func_array($callback, array('data' => $data, 'line' => $line));
 
-            echo implode("\t", $line) . "\n";
+            echo implode("\t", $line);
 
-            @flush();
-            @ob_flush();
-
+            $this->line_break();
         }
     }
 
@@ -450,6 +448,16 @@ class WPUWooImportExport {
 
         return true;
 
+    }
+
+    /* ----------------------------------------------------------
+      Utilities
+    ---------------------------------------------------------- */
+
+    public function line_break() {
+        echo "\n";
+        @flush();
+        @ob_flush();
     }
 
 }
