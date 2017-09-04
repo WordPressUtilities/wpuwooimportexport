@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.13.8
+Version: 0.14.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -265,6 +265,30 @@ class WPUWooImportExport {
     }
 
     /* ----------------------------------------------------------
+      CONVERT CSV LINES
+    ---------------------------------------------------------- */
+
+    public function convert_csv_lines($datas = array(), $lines_association = array()) {
+
+        $_datas = array();
+        foreach ($datas as $data_item) {
+            $_data_item = array();
+
+            /* Search if line has an association */
+            foreach ($lines_association as $line_destination => $line_searched) {
+                if (array_key_exists($line_searched, $data_item)) {
+                    $_data_item[$line_destination] = $data_item[$line_searched];
+                }
+            }
+            if (!empty($_data_item)) {
+                $_datas[] = $_data_item;
+            }
+        }
+
+        return $_datas;
+    }
+
+    /* ----------------------------------------------------------
       GET CSV FROM DATAS
     ---------------------------------------------------------- */
 
@@ -289,7 +313,7 @@ class WPUWooImportExport {
       DISPLAY DATAS
     ---------------------------------------------------------- */
 
-    public function display_table_datas($datas = array(), $columns = array(), $callback) {
+    public function display_table_datas($datas = array(), $columns = array(), $callback, $callback_arg) {
         $count_datas = count($datas);
         if (!$count_datas) {
             return false;
@@ -302,7 +326,7 @@ class WPUWooImportExport {
                 'i' => sprintf('%s/%s', $i + 1, $count_datas)
             );
 
-            $line = call_user_func_array($callback, array('data' => $data, 'line' => $line));
+            $line = call_user_func_array($callback, array('data' => $data, 'line' => $line, 'args' => $callback_arg));
 
             echo implode("\t", $line);
 
@@ -346,7 +370,9 @@ class WPUWooImportExport {
                         $data_line[$ii] = $value;
                     }
                 }
-                $data_lines[] = $data_line;
+                if (!empty($data_line)) {
+                    $data_lines[] = $data_line;
+                }
                 $i++;
             }
             fclose($handle);

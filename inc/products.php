@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.3.3
+* PRODUCTS V 0.4.0
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -79,7 +79,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                 'price' => $product->get_price(),
                 'sku' => $product->get_sku(),
                 'stock_status' => $product->get_stock_status(),
-                'tax' => $product->get_tax_class(),
+                'tax' => $product->get_tax_class()
             );
 
             if ($load_variations && $product->is_type('variable')) {
@@ -96,7 +96,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                         'price' => $product_var->get_price(),
                         'sku' => $product_var->get_sku(),
                         'stock_status' => $product_var->get_stock_status(),
-                        'tax' => $product_var->get_tax_class(),
+                        'tax' => $product_var->get_tax_class()
 
                     );
                     $products[] = $product_item;
@@ -156,4 +156,34 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
 
         return $line;
     }
+
+    /* Create or update
+    -------------------------- */
+
+    public function create_update_products_from_datas($datas, $callback_args = false) {
+        if (!$callback_args) {
+            $callback_args = array('associative_key' => '_sku');
+        }
+        $this->display_table_datas($datas, array(), array(&$this, 'create_update_product_from_datas'), $callback_args);
+    }
+
+    public function create_update_product_from_datas($data, $line, $args = array()) {
+        $associative_key = '_sku';
+        if (array($args) && isset($args['associative_key'])) {
+            $associative_key = $args['associative_key'];
+        }
+
+        $product_id = wc_get_product_id_by_sku($data['_sku']);
+        if (is_numeric($product_id) && $product_id > 0) {
+            $data['product_id'] = $product_id;
+            $line = $this->update_product_from_datas($data, $line);
+        } else {
+            $line = $this->create_product_from_datas($data, $line);
+        }
+
+        unset($line['product_id']);
+
+        return $line;
+    }
+
 }
