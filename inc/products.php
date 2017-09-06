@@ -1,8 +1,15 @@
 <?php
 
 /*
-* PRODUCTS V 0.4.0
+* PRODUCTS V 0.5.0
 */
+
+/*
+ * TODO
+ * - Delete products not in file
+ * - Delete products not in file
+ * - Import images
+ */
 
 include dirname(__FILE__) . '/bootstrap.php';
 
@@ -138,10 +145,10 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         $this->display_table_datas($datas, array(), array(&$this, 'update_product_from_datas'));
     }
 
-    public function update_product_from_datas($data, $line) {
+    public function update_product_from_datas($data, $line, $variation = false) {
         $line['post_id'] = $data['product_id'];
 
-        $line_test = $this->test_post($line['post_id'], 'product');
+        $line_test = $this->test_post($line['post_id'], $variation ? 'product_variation' : 'product');
         if ($line_test !== true) {
             $line['msg'] = $line_test;
             return $line;
@@ -184,6 +191,171 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         unset($line['product_id']);
 
         return $line;
+    }
+
+    /* Variations
+    -------------------------- */
+
+    public function create_update_variations_from_datas($datas, $callback_args = false) {
+        if (!$callback_args) {
+            $callback_args = array('associative_key' => '_sku');
+        }
+        $this->display_table_datas($datas, array(), array(&$this, 'create_update_variation_from_datas'), $callback_args);
+    }
+
+    public function create_update_variation_from_datas($data, $line, $args = array()) {
+        $associative_key = '_sku';
+        if (array($args) && isset($args['associative_key'])) {
+            $associative_key = $args['associative_key'];
+        }
+        if (!isset($data['_parent'], $args['attribute_id'], $args['attribute_value'], $data[$args['attribute_value']])) {
+            $line['msg'] = 'Invalid variation';
+            return $line;
+        }
+
+        $parent_id = wc_get_product_id_by_sku($data['_parent']);
+
+        if (!is_numeric($parent_id)) {
+            $line['msg'] = 'Parent does not exists';
+            return $line;
+        }
+
+        /* Parent should be variable */
+        wp_set_object_terms($parent_id, 'variable', 'product_type', false);
+
+        /* Set parent attribute */
+        $term_taxo = 'pa_' . $args['attribute_id'];
+        update_post_meta($parent_id, '_product_attributes', array(
+            $term_taxo => array(
+                'name' => $term_taxo,
+                'value' => '',
+                'is_visible' => '1',
+                'is_variation' => '1',
+                'is_taxonomy' => '1'
+            )
+        ));
+
+        /* Set variation */
+        $term_value = $data[$args['attribute_value']];
+        $term = get_term_by('name', $term_value, $term_taxo);
+        if (!$term) {
+            $term = wp_insert_term($term_value, $term_taxo);
+            $term = get_term_by('ID', $term['term_id'], $term_taxo);
+        }
+        $term_id = $term->term_id;
+        $term_slug = $term->slug;
+
+        wp_set_object_terms($parent_id, $term_slug, $term_taxo, 1);
+
+        /* Get variations */
+        $product = new WC_Product_Variable($parent_id);
+        $variables = $product->get_available_variations();
+        $existing_attributes = array();
+        if (!empty($variables)) {
+            foreach ($variables as $key => $var) {
+                if (isset($var['attributes'], $var['attributes']['attribute_' . $term_taxo])) {
+                    $existing_attributes[$var['attributes']['attribute_' . $term_taxo]] = $var['variation_id'];
+                }
+            }
+        }
+
+        if (!isset($data['_price']) || empty($data['_price'])) {
+            $data['_price'] = get_post_meta($parent_id, '_price', 1);
+        }
+        if (!isset($data['_regular_price']) || empty($data['_regular_price'])) {
+            $data['_regular_price'] = get_post_meta($parent_id, '_regular_price', 1);
+        }
+        if (!isset($data['_sale_price']) || empty($data['_sale_price'])) {
+            $data['_sale_price'] = get_post_meta($parent_id, '_sale_price', 1);
+        }
+
+        /* Create attribute product if absent */
+        $is_creation = false;
+        if (empty($existing_attributes) || !array_key_exists($term_slug, $existing_attributes)) {
+            $variation_id = $this->create_product_variation($parent_id);
+            $is_creation = true;
+            update_post_meta($variation_id, 'attribute_' . $term_taxo, $term_slug);
+        } else {
+            $variation_id = $existing_attributes[$term_slug];
+        }
+
+        /* Set variation */
+        $data['product_id'] = $variation_id;
+        $line = $this->update_product_from_datas($data, $line, 1);
+
+        $line['msg'] = $is_creation ? 'Successful variation creation' : $line['msg'];
+
+        /* Sync parent product */
+        WC_Product_Variable::sync($parent_id);
+
+        return $line;
+    }
+
+    public function create_product_variation($parent_id) {
+        return wp_insert_post(array(
+            'post_title' => 'Product #' . $parent_id . ' Variation',
+            'post_content' => '',
+            'post_status' => 'publish',
+            'post_parent' => $parent_id,
+            'post_type' => 'product_variation'
+        ));
+    }
+
+    /* Attributes
+    -------------------------- */
+
+    public function register_attribute($attribute_id, $attribute_name) {
+        global $wpdb;
+        $attribute_ids = $wpdb->get_col('SELECT attribute_name FROM ' . $wpdb->prefix . 'woocommerce_attribute_taxonomies');
+        if (!in_array($attribute_id, $attribute_ids)) {
+            $insert = $this->process_add_attribute(array(
+                'attribute_name' => $attribute_id,
+                'attribute_label' => $attribute_name,
+                'attribute_type' => 'text',
+                'attribute_orderby' => 'menu_order',
+                'attribute_public' => false
+            ));
+        }
+    }
+
+    /* Custom attribute : http://wordpress.stackexchange.com/a/246687*/
+
+    public function process_add_attribute($attribute) {
+        global $wpdb;
+        /* Default values */
+        if (empty($attribute['attribute_type'])) {
+            $attribute['attribute_type'] = 'text';
+        }
+        if (empty($attribute['attribute_orderby'])) {
+            $attribute['attribute_orderby'] = 'menu_order';
+        }
+        if (empty($attribute['attribute_public'])) {
+            $attribute['attribute_public'] = 0;
+        }
+        /* Validate content */
+        if (empty($attribute['attribute_name']) || empty($attribute['attribute_label'])) {
+            return new WP_Error('error', __('Please, provide an attribute name and slug.', 'woocommerce'));
+        } elseif (($valid_attribute_name = $this->valid_attribute_name($attribute['attribute_name'])) && is_wp_error($valid_attribute_name)) {
+            return $valid_attribute_name;
+        } elseif (taxonomy_exists(wc_attribute_taxonomy_name($attribute['attribute_name']))) {
+            return new WP_Error('error', sprintf(__('Slug "%s" is already in use. Change it, please.', 'woocommerce'), sanitize_title($attribute['attribute_name'])));
+        }
+        /* Insert */
+        $wpdb->insert($wpdb->prefix . 'woocommerce_attribute_taxonomies', $attribute);
+        do_action('woocommerce_attribute_added', $wpdb->insert_id, $attribute);
+        flush_rewrite_rules();
+        delete_transient('wc_attribute_taxonomies');
+
+        return true;
+    }
+
+    public function valid_attribute_name($attribute_name) {
+        if (strlen($attribute_name) >= 28) {
+            return new WP_Error('error', sprintf(__('Slug "%s" is too long (28 characters max). Shorten it, please.', 'woocommerce'), sanitize_title($attribute_name)));
+        } elseif (wc_check_if_attribute_name_is_reserved($attribute_name)) {
+            return new WP_Error('error', sprintf(__('Slug "%s" is not allowed because it is a reserved term. Change it, please.', 'woocommerce'), sanitize_title($attribute_name)));
+        }
+        return true;
     }
 
 }
