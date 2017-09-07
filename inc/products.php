@@ -1,12 +1,11 @@
 <?php
 
 /*
-* PRODUCTS V 0.5.0
+* PRODUCTS V 0.5.1
 */
 
 /*
  * TODO
- * - Delete products not in file
  * - Delete products not in file
  * - Import images
  */
@@ -200,7 +199,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         if (!$callback_args) {
             $callback_args = array('associative_key' => '_sku');
         }
-        $this->display_table_datas($datas, array(), array(&$this, 'create_update_variation_from_datas'), $callback_args);
+        $this->display_table_datas($datas, array('parent_id' => 'Parent'), array(&$this, 'create_update_variation_from_datas'), $callback_args);
     }
 
     public function create_update_variation_from_datas($data, $line, $args = array()) {
@@ -214,7 +213,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         }
 
         $parent_id = wc_get_product_id_by_sku($data['_parent']);
-
+        $line['parent_id'] = $parent_id;
         if (!is_numeric($parent_id)) {
             $line['msg'] = 'Parent does not exists';
             return $line;
@@ -281,9 +280,12 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
 
         /* Set variation */
         $data['product_id'] = $variation_id;
-        $line = $this->update_product_from_datas($data, $line, 1);
-
-        $line['msg'] = $is_creation ? 'Successful variation creation' : $line['msg'];
+        if (is_numeric($variation_id)) {
+            $line = $this->update_product_from_datas($data, $line, 1);
+            $line['msg'] = $is_creation ? 'Successful variation creation' : 'Successful variation update';
+        } else {
+            $line['msg'] = 'Variation creation has failed';
+        }
 
         /* Sync parent product */
         WC_Product_Variable::sync($parent_id);

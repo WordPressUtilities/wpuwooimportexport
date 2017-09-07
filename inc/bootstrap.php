@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.15.0
+Version: 0.16.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -236,6 +236,42 @@ class WPUWooImportExport {
             $user_keys['ID'] = $user_id;
             wp_update_user($user_keys);
         }
+    }
+
+    /* ----------------------------------------------------------
+      Medias
+    ---------------------------------------------------------- */
+
+    /* https://gist.github.com/hissy/7352933 */
+    public function upload_file($file) {
+        $filename = basename($file);
+
+        /* Try to upload file */
+        $upload_file = wp_upload_bits($filename, null, file_get_contents($file));
+        if ($upload_file['error']) {
+            return false;
+        }
+
+        /* Try to build attachment */
+        $wp_filetype = wp_check_filetype($filename, null);
+        $attachment = array(
+            'post_mime_type' => $wp_filetype['type'],
+            'post_parent' => $parent_post_id,
+            'post_title' => preg_replace('/\.[^.]+$/', '', $filename),
+            'post_content' => '',
+            'post_status' => 'inherit'
+        );
+        $attachment_id = wp_insert_attachment($attachment, $upload_file['file'], $parent_post_id);
+        if (is_wp_error($attachment_id)) {
+            return false;
+        }
+
+        /* Fix attachment datas */
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload_file['file']);
+        wp_update_attachment_metadata($attachment_id, $attachment_data);
+        return $attachment_id;
+
     }
 
     /* ----------------------------------------------------------
