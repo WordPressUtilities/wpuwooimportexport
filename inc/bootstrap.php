@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.16.0
+Version: 0.17.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -105,11 +105,7 @@ class WPUWooImportExport {
             return false;
         }
 
-        if (isset($data['metas']) && is_array($data['metas'])) {
-            foreach ($data['metas'] as $key => $var) {
-                update_post_meta($post_id, $key, $var);
-            }
-        }
+        $this->set_post_metas($post_id, $data);
 
         return $post_id;
 
@@ -198,13 +194,9 @@ class WPUWooImportExport {
 
             /* Column is a postmeta */
             $data['metas'][$key] = $var;
-
         }
 
-        /* Update metas */
-        foreach ($data['metas'] as $key => $var) {
-            update_post_meta($post_id, $key, $var);
-        }
+        $this->set_post_metas($post_id, $data);
 
         /* If post keys are available : use them to reload content */
         if (!empty($post_keys)) {
@@ -239,11 +231,53 @@ class WPUWooImportExport {
     }
 
     /* ----------------------------------------------------------
-      Medias
+      METAS
     ---------------------------------------------------------- */
 
+    public function set_post_metas($post_id, $data) {
+        if (!isset($data['metas']) || !is_array($data['metas'])) {
+            return;
+        }
+        if (array_key_exists('post_thumbnail', $data['metas'])) {
+            $this->set_post_thumbnail($post_id, $data['metas']['post_thumbnail']);
+        }
+        foreach ($data['metas'] as $key => $var) {
+            update_post_meta($post_id, $key, $var);
+        }
+    }
+
+    /* ----------------------------------------------------------
+      MEDIAS
+    ---------------------------------------------------------- */
+
+    public function set_post_thumbnail($post_id, $file_thumbnail) {
+
+        /* Check if thumbnail exists */
+        $file_thumbnail = trim($file_thumbnail);
+        if (empty($file_thumbnail) || !file_exists($file_thumbnail)) {
+            return false;
+        }
+
+        /* Compare hashes */
+        $post_thumbnail_hash = get_post_meta($post_id, 'post_thumbnail_hash', 1);
+        $file_thumbnail_hash = md5_file($file_thumbnail);
+        if ($file_thumbnail_hash == $post_thumbnail_hash) {
+            return false;
+        }
+
+        /* Upload file */
+        $thumbnail_id = $this->upload_file($file_thumbnail, $post_id);
+        if (!is_numeric($thumbnail_id)) {
+            return false;
+        }
+
+        /* Save new thumbnail */
+        set_post_thumbnail($post_id, $thumbnail_id);
+        update_post_meta($post_id, 'post_thumbnail_hash', $file_thumbnail_hash);
+    }
+
     /* https://gist.github.com/hissy/7352933 */
-    public function upload_file($file) {
+    public function upload_file($file, $parent_post_id = 0) {
         $filename = basename($file);
 
         /* Try to upload file */
