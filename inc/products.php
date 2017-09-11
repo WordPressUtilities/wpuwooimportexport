@@ -1,13 +1,12 @@
 <?php
 
 /*
-* PRODUCTS V 0.5.1
+* PRODUCTS V 0.5.2
 */
 
 /*
  * TODO
  * - Delete products not in file
- * - Import images
  */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -312,10 +311,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         if (!in_array($attribute_id, $attribute_ids)) {
             $insert = $this->process_add_attribute(array(
                 'attribute_name' => $attribute_id,
-                'attribute_label' => $attribute_name,
-                'attribute_type' => 'text',
-                'attribute_orderby' => 'menu_order',
-                'attribute_public' => false
+                'attribute_label' => $attribute_name
             ));
         }
     }
@@ -324,16 +320,18 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
 
     public function process_add_attribute($attribute) {
         global $wpdb;
+
         /* Default values */
-        if (empty($attribute['attribute_type'])) {
+        if (!isset($attribute['attribute_type']) || empty($attribute['attribute_type'])) {
             $attribute['attribute_type'] = 'text';
         }
-        if (empty($attribute['attribute_orderby'])) {
+        if (!isset($attribute['attribute_orderby']) || empty($attribute['attribute_orderby'])) {
             $attribute['attribute_orderby'] = 'menu_order';
         }
-        if (empty($attribute['attribute_public'])) {
-            $attribute['attribute_public'] = 0;
+        if (!isset($attribute['attribute_public']) || empty($attribute['attribute_public'])) {
+            $attribute['attribute_public'] = false;
         }
+
         /* Validate content */
         if (empty($attribute['attribute_name']) || empty($attribute['attribute_label'])) {
             return new WP_Error('error', __('Please, provide an attribute name and slug.', 'woocommerce'));
@@ -342,6 +340,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         } elseif (taxonomy_exists(wc_attribute_taxonomy_name($attribute['attribute_name']))) {
             return new WP_Error('error', sprintf(__('Slug "%s" is already in use. Change it, please.', 'woocommerce'), sanitize_title($attribute['attribute_name'])));
         }
+
         /* Insert */
         $wpdb->insert($wpdb->prefix . 'woocommerce_attribute_taxonomies', $attribute);
         do_action('woocommerce_attribute_added', $wpdb->insert_id, $attribute);
