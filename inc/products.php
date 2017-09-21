@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.5.2
+* PRODUCTS V 0.6.0
 */
 
 /*
@@ -174,16 +174,28 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
 
     public function create_update_product_from_datas($data, $line, $args = array()) {
         $associative_key = '_sku';
-        if (array($args) && isset($args['associative_key'])) {
+        if (!is_array($args)) {
+            $args = array();
+        }
+        if (isset($args['associative_key'])) {
             $associative_key = $args['associative_key'];
         }
 
         $product_id = wc_get_product_id_by_sku($data['_sku']);
+
+        if (isset($args['callback_before'])) {
+            call_user_func($args['callback_before'], $product_id, $data, $line);
+        }
+
         if (is_numeric($product_id) && $product_id > 0) {
             $data['product_id'] = $product_id;
             $line = $this->update_product_from_datas($data, $line);
         } else {
             $line = $this->create_product_from_datas($data, $line);
+        }
+
+        if (isset($args['callback_after'])) {
+            call_user_func($args['callback_after'], $product_id, $data, $line);
         }
 
         unset($line['product_id']);
@@ -223,14 +235,12 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
 
         /* Set parent attribute */
         $term_taxo = 'pa_' . $args['attribute_id'];
-        update_post_meta($parent_id, '_product_attributes', array(
-            $term_taxo => array(
-                'name' => $term_taxo,
-                'value' => '',
-                'is_visible' => '1',
-                'is_variation' => '1',
-                'is_taxonomy' => '1'
-            )
+        $this->add_product_attribute($parent_id, $args['attribute_id'], array(
+            'name' => $term_taxo,
+            'value' => '',
+            'is_visible' => '0',
+            'is_variation' => '1',
+            'is_taxonomy' => '1'
         ));
 
         /* Set variation */
@@ -309,7 +319,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         global $wpdb;
         $attribute_ids = $wpdb->get_col('SELECT attribute_name FROM ' . $wpdb->prefix . 'woocommerce_attribute_taxonomies');
         if (!in_array($attribute_id, $attribute_ids)) {
-            $insert = $this->process_add_attribute(array(
+            $insert = $this->process_add_taxo_attribute(array(
                 'attribute_name' => $attribute_id,
                 'attribute_label' => $attribute_name
             ));
@@ -317,8 +327,7 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
     }
 
     /* Custom attribute : http://wordpress.stackexchange.com/a/246687*/
-
-    public function process_add_attribute($attribute) {
+    public function process_add_taxo_attribute($attribute) {
         global $wpdb;
 
         /* Default values */
@@ -357,6 +366,34 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
             return new WP_Error('error', sprintf(__('Slug "%s" is not allowed because it is a reserved term. Change it, please.', 'woocommerce'), sanitize_title($attribute_name)));
         }
         return true;
+    }
+
+    public function add_product_attribute($post_id, $attr_id, $attribute = array()) {
+        $attribute_name = 'pa_' . $attr_id;
+        $product_attributes = get_post_meta($post_id, '_product_attributes', 1);
+        if (!is_array($product_attributes)) {
+            $product_attributes = array();
+        }
+        if (!is_array($attribute)) {
+            $attribute = array();
+        }
+        if (!isset($attribute['is_visible'])) {
+            $attribute['is_visible'] = 1;
+        }
+        if (!isset($attribute['is_variation'])) {
+            $attribute['is_variation'] = 0;
+        }
+        if (!isset($attribute['is_taxonomy'])) {
+            $attribute['is_taxonomy'] = 0;
+        }
+        if (!isset($attribute['name'])) {
+            $attribute['name'] = $attribute_name;
+        }
+        if (!isset($attribute['value'])) {
+            $attribute['value'] = '';
+        }
+        $product_attributes[$attribute_name] = $attribute;
+        update_post_meta($post_id, '_product_attributes', $product_attributes);
     }
 
 }
