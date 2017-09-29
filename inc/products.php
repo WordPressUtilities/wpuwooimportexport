@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.6.0
+* PRODUCTS V 0.6.1
 */
 
 /*
@@ -355,6 +355,16 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         do_action('woocommerce_attribute_added', $wpdb->insert_id, $attribute);
         flush_rewrite_rules();
         delete_transient('wc_attribute_taxonomies');
+
+        /* Temporary hardcoded register to update $wp_taxonomies */
+        register_taxonomy(
+            'pa_' . $attribute["attribute_name"],
+            'product',
+            array(
+                'label' => $attribute["attribute_label"],
+                'public' => $attribute["attribute_public"]
+            )
+        );
 
         return true;
     }
