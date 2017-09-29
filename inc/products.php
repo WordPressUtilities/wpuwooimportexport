@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.6.1
+* PRODUCTS V 0.6.2
 */
 
 /*
@@ -248,10 +248,13 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
         $term = get_term_by('name', $term_value, $term_taxo);
         if (!$term) {
             $term = wp_insert_term($term_value, $term_taxo);
-            $term = get_term_by('ID', $term['term_id'], $term_taxo);
+            $term = get_term_by('term_taxonomy_id', $term['term_taxonomy_id'], $term_taxo);
         }
         $term_id = $term->term_id;
         $term_slug = $term->slug;
+        if (isset($args['callback_after_term'])) {
+            call_user_func($args['callback_after_term'], $term_id, $data, $line);
+        }
 
         wp_set_object_terms($parent_id, $term_slug, $term_taxo, 1);
 
@@ -285,6 +288,10 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
             update_post_meta($variation_id, 'attribute_' . $term_taxo, $term_slug);
         } else {
             $variation_id = $existing_attributes[$term_slug];
+        }
+
+        if (isset($args['callback_after_variation'])) {
+            call_user_func($args['callback_after_variation'], $variation_id, $data, $line);
         }
 
         /* Set variation */
