@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.6.2
+* PRODUCTS V 0.6.3
 */
 
 /*
@@ -383,6 +383,11 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
             return new WP_Error('error', sprintf(__('Slug "%s" is not allowed because it is a reserved term. Change it, please.', 'woocommerce'), sanitize_title($attribute_name)));
         }
         return true;
+    }
+
+    public function has_product_attribute($post_id, $attr_id, $attribute = array()) {
+        $product_attributes = get_post_meta($post_id, '_product_attributes', 1);
+        return (is_array($product_attributes) && isset($product_attributes['pa_' . $attr_id]));
     }
 
     public function add_product_attribute($post_id, $attr_id, $attribute = array()) {
