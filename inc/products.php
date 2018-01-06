@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.6.3
+* PRODUCTS V 0.6.4
 */
 
 /*
@@ -97,12 +97,11 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                         'title' => $product_post->post_title . ' - ' . implode(' - ', $product_var->get_attributes()),
                         'attributes' => implode('/', $product_var->get_attributes()),
                         'parent' => $product_post->ID,
-                        'date' => $variation_post['post_date'],
+                        'date' => $product_var->get_date_created()->date('Y-m-d H:i:s'),
                         'price' => $product_var->get_price(),
                         'sku' => $product_var->get_sku(),
                         'stock_status' => $product_var->get_stock_status(),
                         'tax' => $product_var->get_tax_class()
-
                     );
                     $products[] = $product_item;
                 }
