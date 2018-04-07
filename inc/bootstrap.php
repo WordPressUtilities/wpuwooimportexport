@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.18.7
+Version: 0.18.8
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -100,11 +100,22 @@ class WPUWooImportExport {
             return false;
         }
 
+        /* Filter values */
+        if (isset($data['post_title'])) {
+            $data['post_title'] = wp_strip_all_tags($data['post_title']);
+        }
+
+        if (!isset($data['post_status'])) {
+            $data['post_status'] = 'publish';
+        }
+
+        /* Insert post */
         $post_id = wp_insert_post($data);
         if (!is_numeric($post_id)) {
             return false;
         }
 
+        /* Metas */
         $this->set_post_metas($post_id, $data);
 
         return $post_id;
@@ -254,7 +265,16 @@ class WPUWooImportExport {
 
         /* Check if thumbnail exists */
         $file_thumbnail = trim($file_thumbnail);
-        if (empty($file_thumbnail) || !file_exists($file_thumbnail)) {
+        if (empty($file_thumbnail)) {
+            return false;
+        }
+        if (!file_exists($file_thumbnail)) {
+            $file_thumbnail = remove_accents($file_thumbnail);
+            if (!file_exists($file_thumbnail)) {
+                return false;
+            }
+        }
+        if (!is_file($file_thumbnail)) {
             return false;
         }
 
@@ -350,6 +370,7 @@ class WPUWooImportExport {
         /* Delete all */
         $posts = get_posts(array(
             'post_type' => $post_type,
+            'post_status' => 'any',
             'numberposts' => -1
         ));
         foreach ($posts as $post_item) {
