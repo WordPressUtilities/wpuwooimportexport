@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.2.0
+* Posts V 0.2.1
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -58,7 +58,7 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
 
     }
 
-    public function import_post($post_id) {
+    public function import_post($post_id, $options = array()) {
         # GET DIR
         $dir = $this->get_upload_dir($post_id);
 
@@ -106,6 +106,8 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
             echo '- Attachments are invalid or do not exists : skipping this.';
         }
 
+        $find_attachments_metas = (is_array($options) && isset($options['find_attachments_metas']) && $options['find_attachments_metas']);
+
         # GET METAS
         $metas = $this->get_array_from_file($dir['full'] . 'metas.json');
         foreach ($metas as $key => $value) {
@@ -124,7 +126,7 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
                     break;
                 }
 
-                if ($key != '_thumbnail_id') {
+                if ($key != '_thumbnail_id' && !$find_attachments_metas) {
                     break;
                 }
 
