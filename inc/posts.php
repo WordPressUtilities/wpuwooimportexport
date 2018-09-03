@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.1.0
+* Posts V 0.2.0
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -22,6 +22,12 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
 
         # SAVE POST
         $post = get_post($post_id);
+        # REMOVE UNUSED
+        unset($post->guid);
+        unset($post->to_ping);
+        unset($post->pinged);
+        unset($post->ID);
+        unset($post->post_parent);
         file_put_contents($dir['full'] . 'post.json', json_encode($post));
 
         # SAVE METAS
@@ -38,26 +44,102 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         ));
         $attachments = array();
         foreach ($attachments_raw as $attachment_raw) {
-            #
-            $attachment = $attachment_raw;
-            $attachment->dirname = get_attached_file($attachment_raw->ID, 1);
-            $attachment->filename = basename(get_attached_file($attachment_raw->ID, 1));
-            $attachments[] = $attachment;
+            # Copy attachment object
+            $att_dirname = get_attached_file($attachment_raw->ID, 1);
+            $att = array(
+                'ID' => $attachment_raw->ID,
+                'filename' => basename(get_attached_file($attachment_raw->ID, 1))
+            );
+            $attachments[] = $att;
             # Copy file
-            copy($attachment->dirname, $dir['files'] . $attachment->filename);
+            copy($att_dirname, $dir['files'] . $att['filename']);
         }
         file_put_contents($dir['full'] . 'attachments.json', json_encode($attachments));
 
     }
 
-    public function import_post($id) {
-        # TEST POST ID
-        if (!is_numeric($post_id)) {
+    public function import_post($post_id) {
+        # GET DIR
+        $dir = $this->get_upload_dir($post_id);
+
+        # GET POST OBJECT
+        $post = $this->get_array_from_file($dir['full'] . 'post.json');
+        if (!is_array($post)) {
+            echo '# Invalid post';
             return false;
         }
 
-        # GET DIR
-        $dir = $this->get_upload_dir($post_id);
+        # IMPORT OBJECT WITHOUT SOME LINES
+        $new_post_id = wp_insert_post($post);
+
+        if (!is_numeric($new_post_id)) {
+            echo '# Post was not created';
+            return false;
+        }
+
+        # GET ATTACHMENTS
+        $_attachments_table = array();
+        $_attachments_link = array();
+        $attachments = $this->get_array_from_file($dir['full'] . 'attachments.json');
+        if (is_array($attachments)) {
+            # EXTRACT IDS AND FILES IN A LIST
+            foreach ($attachments as $att) {
+                $att = (array) $att;
+                $filepath = $dir['files'] . $att['filename'];
+                if (!file_exists($filepath)) {
+                    echo '- File does not exists : skipping this.';
+                    continue;
+                }
+
+                # LOAD FILE
+                $file_up = $this->upload_file($filepath, $new_post_id);
+                if (!is_numeric($file_up)) {
+                    echo '- File could not be uploaded : skipping this.';
+                    continue;
+                }
+                $att['new_id'] = $file_up;
+                $_attachments_table[] = $att;
+                $_attachments_link[$att['ID']] = $file_up;
+            }
+
+        } else {
+            echo '- Attachments are invalid or do not exists : skipping this.';
+        }
+
+        # GET METAS
+        $metas = $this->get_array_from_file($dir['full'] . 'metas.json');
+        foreach ($metas as $key => $value) {
+            if (is_array($value)) {
+                $value = $value[0];
+            }
+
+            # CONVERT OLD ATT IDS NEW ATT IDS
+            do {
+                if (empty($_attachments_link)) {
+                    return;
+                }
+
+                /* IF NUMERIC */
+                if (!is_numeric($value)) {
+                    break;
+                }
+
+                if ($key != '_thumbnail_id') {
+                    break;
+                }
+
+                /* Convert if possible */
+                $value = intval($value, 10);
+                if (array_key_exists($value, $_attachments_link)) {
+                    $value = $_attachments_link[$value];
+                }
+
+            } while (0);
+
+            # IMPORT METAS
+            update_post_meta($new_post_id, $key, $value);
+        }
+
     }
 
     /* DIRS */
@@ -74,6 +156,21 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
             mkdir($dir['files'], 0755, 1);
         }
         return $dir;
+    }
+
+    public function get_array_from_file($_file) {
+        if (!file_exists($_file)) {
+            return '# File does not exists';
+        }
+        $_file = file_get_contents($_file);
+        $_object = json_decode($_file);
+        if (is_array($_object)) {
+            return $_object;
+        }
+        if (!is_object($_object)) {
+            return '# Object is not valid';
+        }
+        return (array) $_object;
     }
 
 }

@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.19.0
+Version: 0.20.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -296,40 +296,40 @@ class WPUWooImportExport {
         update_post_meta($post_id, 'post_thumbnail_hash', $file_thumbnail_hash);
     }
 
-    /* https://gist.github.com/hissy/7352933 */
-    public function upload_file($file, $parent_post_id = 0) {
+    public function upload_file($filepath, $parent_post_id = 0) {
 
-        if (!file_exists($file)) {
+        if (!file_exists($filepath)) {
             return false;
         }
 
-        $filename = basename($file);
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/media.php';
 
-        /* Try to upload file */
-        $upload_file = wp_upload_bits($filename, null, file_get_contents($file));
-        if ($upload_file['error']) {
-            return false;
-        }
+        $upload_dir = wp_upload_dir();
 
-        /* Try to build attachment */
-        $wp_filetype = wp_check_filetype($filename, null);
-        $attachment = array(
-            'post_mime_type' => $wp_filetype['type'],
-            'post_parent' => $parent_post_id,
-            'post_title' => preg_replace('/\.[^.]+$/', '', $filename),
-            'post_content' => '',
-            'post_status' => 'inherit'
-        );
-        $attachment_id = wp_insert_attachment($attachment, $upload_file['file'], $parent_post_id);
+        /* Get file info */
+        $basename = basename($filepath);
+        $filetype = wp_check_filetype($filepath);
+
+        /* Copy file to avoid deleting it */
+        $tmpfile = $upload_dir['basedir'] . $basename;
+        copy($filepath, $tmpfile);
+
+        /* Upload copied file */
+        $attachment_id = media_handle_sideload(array(
+            'name' => strtolower(remove_accents($basename)),
+            'tmp_name' => $tmpfile,
+            'type' => $filetype['type'],
+            'size' => filesize($filepath),
+            'error' => UPLOAD_ERR_OK
+        ), $parent_post_id);
+
         if (is_wp_error($attachment_id)) {
             return false;
+        } else {
+            return $attachment_id;
         }
-
-        /* Fix attachment datas */
-        require_once ABSPATH . 'wp-admin/includes/image.php';
-        $attachment_data = wp_generate_attachment_metadata($attachment_id, $upload_file['file']);
-        wp_update_attachment_metadata($attachment_id, $attachment_data);
-        return $attachment_id;
 
     }
 
