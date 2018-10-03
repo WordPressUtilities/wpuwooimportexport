@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.2.1
+* Posts V 0.3.0
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -11,17 +11,36 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         parent::__construct();
     }
 
-    public function export_post($post_id) {
+    public function export_post($post_id, $options = array()) {
         # TEST POST ID
         if (!is_numeric($post_id)) {
             return false;
         }
 
-        # GET DIR
-        $dir = $this->get_upload_dir($post_id);
+        # SET OPTIONS
+        if (!is_array($options)) {
+            $options = array();
+        }
+        if (!isset($options['folder'])) {
+            $options['folder'] = false;
+        }
+        if (!isset($options['skip_empty_metas'])) {
+            $options['skip_empty_metas'] = false;
+        }
 
         # SAVE POST
         $post = get_post($post_id);
+
+        # GET DIR
+        $dir_id = $post_id;
+        if ($options['folder'] !== false) {
+            $dir_id = $options['folder'];
+        }
+        if ($dir_id == 'slug') {
+            $dir_id = $post->post_name;
+        }
+        $dir = $this->get_upload_dir($dir_id);
+
         # REMOVE UNUSED
         unset($post->guid);
         unset($post->to_ping);
@@ -32,6 +51,19 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
 
         # SAVE METAS
         $post_metas = get_post_meta($post_id);
+        if ($options['skip_empty_metas']) {
+            $_post_metas = array();
+            foreach ($post_metas as $key => $var) {
+                if (empty($var)) {
+                    continue;
+                }
+                if (is_array($var) && isset($var[0]) && empty($var[0])) {
+                    continue;
+                }
+                $_post_metas[$key] = $var;
+            }
+            $post_metas = $_post_metas;
+        }
         file_put_contents($dir['full'] . 'metas.json', json_encode($post_metas));
 
         # SAVE ATTACHMENTS
