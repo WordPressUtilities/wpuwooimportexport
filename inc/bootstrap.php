@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.21.0
+Version: 0.22.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -22,6 +22,9 @@ ini_set('memory_limit', '1G');
 
 /* Disable default environment */
 define('WP_USE_THEMES', false);
+
+/* Fix for qtranslate and other plugins */
+define('WP_ADMIN', true);
 
 /* Load WordPress */
 /* Thanks to http://boiteaweb.fr/wordpress-bootstraps-ou-comment-bien-charger-wordpress-6717.html */
@@ -601,6 +604,47 @@ class WPUWooImportExport {
         echo "\n";
         @flush();
         @ob_flush();
+    }
+
+    /* ----------------------------------------------------------
+      MAIL
+    ---------------------------------------------------------- */
+
+    public function wp_mail($to, $subject = '', $body = '', $headers = array(), $attachments = array()) {
+
+        if (!$headers) {
+            $mail_from_name = get_option('mail_from_name');
+            if (!$mail_from_name) {
+                $mail_from_name = get_bloginfo('name');
+            }
+
+            $mail_from = get_option('mail_from');
+            if (!$mail_from) {
+                $mail_from = get_option('admin_email');
+            }
+
+            $headers = array(
+                'Content-Type: text/html; charset=UTF-8',
+                'From: ' . $mail_from_name . ' <' . $mail_from . '>'
+            );
+        }
+
+        $result = wp_mail($to, $subject, $body, $headers, $attachments);
+
+        // wp mail debugging
+        if (!$result) {
+            global $ts_mail_errors;
+            global $phpmailer;
+
+            if (!isset($ts_mail_errors)) {
+                $ts_mail_errors = array();
+            }
+            if (isset($phpmailer)) {
+                $ts_mail_errors[] = $phpmailer->ErrorInfo;
+            }
+
+            error_log(print_r($ts_mail_errors, true));
+        }
     }
 
 }
