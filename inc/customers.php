@@ -1,12 +1,21 @@
 <?php
 
 /*
-* CUSTOMERS V 0.2.0
+* CUSTOMERS V 0.3.0
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
 
 class WPUWooImportExport_Customers extends WPUWooImportExport {
+
+    private $default_customer_fields = array(
+        'company' => 'billing_company',
+        'address_1' => 'billing_address_1',
+        'address_2' => 'billing_address_2',
+        'postcode' => 'billing_postcode',
+        'city' => 'billing_city'
+    );
+
     public function __construct() {
         parent::__construct();
     }
@@ -14,8 +23,9 @@ class WPUWooImportExport_Customers extends WPUWooImportExport {
     /* Get customers
     -------------------------- */
 
-    public function get_customers($datas = array()) {
+    public function get_customers($datas = array(), $extra_fields = array()) {
 
+        /* Set datas */
         if (!is_array($datas)) {
             $datas = array();
         }
@@ -25,6 +35,17 @@ class WPUWooImportExport_Customers extends WPUWooImportExport {
         if (!isset($datas['orderby'])) {
             $datas['orderby'] = 'ID';
         }
+
+        /* Set fields */
+        if (!is_array($extra_fields)) {
+            $extra_fields = array();
+        }
+        foreach ($this->default_customer_fields as $field_id => $field_meta_id) {
+            if (!isset($extra_fields)) {
+                $extra_fields[$field_id] = $field_meta_id;
+            }
+        }
+
         $customers = array();
         $users = get_users($datas);
 
@@ -44,20 +65,10 @@ class WPUWooImportExport_Customers extends WPUWooImportExport {
                 'city' => ''
             );
 
-            if (isset($user_info['billing_company'])) {
-                $customer['company'] = implode('', $user_info['billing_company']);
-            }
-            if (isset($user_info['billing_address_1'])) {
-                $customer['address_1'] = implode('', $user_info['billing_address_1']);
-            }
-            if (isset($user_info['billing_address_2'])) {
-                $customer['address_2'] = implode('', $user_info['billing_address_2']);
-            }
-            if (isset($user_info['billing_postcode'])) {
-                $customer['postcode'] = implode('', $user_info['billing_postcode']);
-            }
-            if (isset($user_info['billing_city'])) {
-                $customer['city'] = implode('', $user_info['billing_city']);
+            foreach ($extra_fields as $field_id => $field_meta_id) {
+                if (isset($user_info[$field_meta_id])) {
+                    $customer[$field_id] = implode('', $user_info[$field_meta_id]);
+                }
             }
 
             if (apply_filters('wpuwooimportexport_customers_use_customer', true, $customer)) {
