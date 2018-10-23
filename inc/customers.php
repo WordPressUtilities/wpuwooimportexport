@@ -1,7 +1,7 @@
 <?php
 
 /*
-* CUSTOMERS V 0.3.0
+* CUSTOMERS V 0.3.1
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -41,7 +41,8 @@ class WPUWooImportExport_Customers extends WPUWooImportExport {
             $extra_fields = array();
         }
         foreach ($this->default_customer_fields as $field_id => $field_meta_id) {
-            if (!isset($extra_fields)) {
+            /* Prevent override by a default field */
+            if (!isset($extra_fields[$field_id])) {
                 $extra_fields[$field_id] = $field_meta_id;
             }
         }
@@ -52,7 +53,6 @@ class WPUWooImportExport_Customers extends WPUWooImportExport {
         foreach ($users as $user) {
 
             $user_info = get_user_meta($user->ID);
-
             $customer = array(
                 'id' => $user->ID,
                 'first_name' => $user->first_name,
