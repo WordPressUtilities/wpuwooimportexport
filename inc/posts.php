@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.3.0
+* Posts V 0.3.1
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -27,6 +27,9 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         if (!isset($options['skip_empty_metas'])) {
             $options['skip_empty_metas'] = false;
         }
+        if (!isset($options['export_author_slug'])) {
+            $options['export_author_slug'] = false;
+        }
 
         # SAVE POST
         $post = get_post($post_id);
@@ -47,6 +50,10 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         unset($post->pinged);
         unset($post->ID);
         unset($post->post_parent);
+        if ($options['export_author_slug']) {
+            $author = get_userdata($post->post_author);
+            $post->post_author = $author->data->user_login;
+        }
         file_put_contents($dir['full'] . 'post.json', json_encode($post));
 
         # SAVE METAS
@@ -99,6 +106,14 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         if (!is_array($post)) {
             echo '# Invalid post';
             return false;
+        }
+
+        # Author
+        if (!is_numeric($post->post_author)) {
+            $author = get_user_by('slug', $post->post_author);
+            if (is_object($author) && isset($author->data->ID)) {
+                $post->post_author = $author->data->ID;
+            }
         }
 
         # IMPORT OBJECT WITHOUT SOME LINES
