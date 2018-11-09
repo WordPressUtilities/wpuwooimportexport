@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.23.3
+Version: 0.24.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -10,44 +10,48 @@ License: MIT License
 License URI: http://opensource.org/licenses/MIT
 */
 
+$wpuwooimportexport_is_bootstraped = !defined('ABSPATH');
+
 /* ----------------------------------------------------------
   Load WordPress
 ---------------------------------------------------------- */
 
-/* It could take a while */
-set_time_limit(0);
-ini_set('memory_limit', '1G');
+if($wpuwooimportexport_is_bootstraped){
+    /* It could take a while */
+    set_time_limit(0);
+    ini_set('memory_limit', '1G');
 
-// ignore_user_abort(true);
+    // ignore_user_abort(true);
 
-/* Disable default environment */
-define('WP_USE_THEMES', false);
+    /* Disable default environment */
+    define('WP_USE_THEMES', false);
 
-/* Fix for qtranslate and other plugins */
-define('WP_ADMIN', true);
-$_SERVER['PHP_SELF'] = '/wp-admin/index.php';
+    /* Fix for qtranslate and other plugins */
+    define('WP_ADMIN', true);
+    $_SERVER['PHP_SELF'] = '/wp-admin/index.php';
 
-/* Load WordPress */
-/* Thanks to http://boiteaweb.fr/wordpress-bootstraps-ou-comment-bien-charger-wordpress-6717.html */
-chdir(dirname(__FILE__));
-$bootstrap = 'wp-load.php';
-while (!is_file($bootstrap)) {
-    if (is_dir('..') && getcwd() != '/') {
-        chdir('..');
-    } else {
-        die('EN: Could not find WordPress! FR : Impossible de trouver WordPress !');
+    /* Load WordPress */
+    /* Thanks to http://boiteaweb.fr/wordpress-bootstraps-ou-comment-bien-charger-wordpress-6717.html */
+    chdir(dirname(__FILE__));
+    $bootstrap = 'wp-load.php';
+    while (!is_file($bootstrap)) {
+        if (is_dir('..') && getcwd() != '/') {
+            chdir('..');
+        } else {
+            die('EN: Could not find WordPress! FR : Impossible de trouver WordPress !');
+        }
     }
-}
-require_once $bootstrap;
+    require_once $bootstrap;
 
-/* Start WP */
-wp();
+    /* Start WP */
+    wp();
+}
 
 /* ----------------------------------------------------------
   Disable email
 ---------------------------------------------------------- */
 
-if (!isset($keepmails)) {
+if ($wpuwooimportexport_is_bootstraped && !isset($keepmails)) {
     if (!function_exists('wp_mail')) {
         function wp_mail($to, $subject, $message, $headers = '', $attachments = array()) {
             return true;
