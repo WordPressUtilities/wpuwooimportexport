@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.3.1
+* Posts V 0.3.2
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -29,6 +29,9 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         }
         if (!isset($options['export_author_slug'])) {
             $options['export_author_slug'] = false;
+        }
+        if (!isset($options['create_nonexistant_author'])) {
+            $options['create_nonexistant_author'] = false;
         }
 
         # SAVE POST
@@ -113,6 +116,11 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
             $author = get_user_by('slug', $post->post_author);
             if (is_object($author) && isset($author->data->ID)) {
                 $post->post_author = $author->data->ID;
+            } else if (is_string($post->post_author) && $options['create_nonexistant_author']) {
+                $user_id = wp_create_user($post->post_author);
+                if (is_numeric($user_id)) {
+                    $post->post_author = $user_id;
+                }
             }
         }
 
