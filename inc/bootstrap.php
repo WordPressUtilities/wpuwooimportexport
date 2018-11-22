@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.24.1
+Version: 0.25.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -16,7 +16,7 @@ $wpuwooimportexport_is_bootstraped = !defined('ABSPATH');
   Load WordPress
 ---------------------------------------------------------- */
 
-if($wpuwooimportexport_is_bootstraped){
+if ($wpuwooimportexport_is_bootstraped) {
     /* It could take a while */
     set_time_limit(0);
     ini_set('memory_limit', '1G');
@@ -133,12 +133,13 @@ class WPUWooImportExport {
     /* Create a CSV from datas
     -------------------------- */
 
-    public function create_csv_from_datas($datas = array(), $export_file = 'test.csv', $delimiter = ",", $enclosure = '"') {
+    public function create_csv_from_datas($datas = array(), $export_file = 'test.csv', $delimiter = ",", $enclosure = '"', $columns = array()) {
 
-        $csv = $this->get_csv_from_datas($datas, $delimiter, $enclosure);
-
+        $csv = $this->get_csv_from_datas($datas, $delimiter, $enclosure, $columns);
+        if (!$this->is_utf8($csv)) {
+            $csv = utf8_encode($csv);
+        }
         $fpc = file_put_contents($export_file, $csv);
-
         if (count($fpc)) {
             echo "- Export : ok in " . $export_file . "\n";
         } else {
@@ -415,13 +416,15 @@ class WPUWooImportExport {
       GET CSV FROM DATAS
     ---------------------------------------------------------- */
 
-    public function get_csv_from_datas($datas = array(), $delimiter = ",", $enclosure = '"') {
+    public function get_csv_from_datas($datas = array(), $delimiter = ",", $enclosure = '"', $columns = array()) {
         if (!is_array($datas) || empty($datas)) {
             return '';
         }
         ob_start();
         $out = fopen('php://output', 'w');
-        $columns = array_keys(current($datas));
+        if(!is_array($columns) || empty($columns)){
+            $columns = array_keys(current($datas));
+        }
 
         fputcsv($out, $columns, $delimiter, $enclosure);
         foreach ($datas as $data) {
@@ -609,6 +612,29 @@ class WPUWooImportExport {
         echo "\n";
         @flush();
         @ob_flush();
+    }
+
+    public function remove_accents($name) {
+        if (!$this->is_utf8($name)) {
+            $name = utf8_encode($name);
+        }
+        $name = strtr(utf8_decode($name), utf8_decode('àáâãäçèéêëìíîïñòóôõöōùúûüýÿÀÁÂÃÄÇÈÉÊËÌÍÎÏÑÒÓÔÕÖÙÚÛÜÝ'), 'aaaaaceeeeiiiinoooooouuuuyyAAAAACEEEEIIIINOOOOOUUUUY');
+        return $name;
+    }
+
+    /* Thx http://php.net/manual/fr/function.mb-detect-encoding.php#50087 */
+    public function is_utf8($string) {
+        return preg_match('%^(?:
+              [\x09\x0A\x0D\x20-\x7E]            # ASCII
+            | [\xC2-\xDF][\x80-\xBF]             # non-overlong 2-byte
+            |  \xE0[\xA0-\xBF][\x80-\xBF]        # excluding overlongs
+            | [\xE1-\xEC\xEE\xEF][\x80-\xBF]{2}  # straight 3-byte
+            |  \xED[\x80-\x9F][\x80-\xBF]        # excluding surrogates
+            |  \xF0[\x90-\xBF][\x80-\xBF]{2}     # planes 1-3
+            | [\xF1-\xF3][\x80-\xBF]{3}          # planes 4-15
+            |  \xF4[\x80-\x8F][\x80-\xBF]{2}     # plane 16
+        )*$%xs', $string);
+
     }
 
     /* ----------------------------------------------------------
