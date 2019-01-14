@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.25.0
+Version: 0.26.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -342,6 +342,20 @@ class WPUWooImportExport {
 
     }
 
+    public function set_post_thumbnail_from_url($url, $post_id) {
+        // Add required classes
+        require_once ABSPATH . 'wp-admin/includes/media.php';
+        require_once ABSPATH . 'wp-admin/includes/file.php';
+        require_once ABSPATH . 'wp-admin/includes/image.php';
+
+        // Import image as an attachment
+        $image = media_sideload_image($url, $post_id, '', 'id');
+
+        // set image as the post thumbnail
+        set_post_thumbnail($post_id, $image);
+
+    }
+
     /* ----------------------------------------------------------
       GET SETTINGS FROM CLI
     ---------------------------------------------------------- */
@@ -422,7 +436,7 @@ class WPUWooImportExport {
         }
         ob_start();
         $out = fopen('php://output', 'w');
-        if(!is_array($columns) || empty($columns)){
+        if (!is_array($columns) || empty($columns)) {
             $columns = array_keys(current($datas));
         }
 
@@ -676,6 +690,86 @@ class WPUWooImportExport {
 
             error_log(print_r($ts_mail_errors, true));
         }
+    }
+
+}
+
+/* ----------------------------------------------------------
+  WPDB Override
+---------------------------------------------------------- */
+
+/**
+ * Temporary switch to another database
+ */
+class WPUWooImportExport_WPDBOverride {
+    private $table_prefix;
+
+    public function __construct($autoload = true) {
+        if ($autoload) {
+            $this->connect();
+        }
+    }
+
+    public function __destruct() {
+        $this->disconnect();
+    }
+
+    /* Login / Logout */
+
+    public function connect($db_name = false, $db_prefix = false) {
+        global $wpdb, $table_prefix;
+
+        /* Get values */
+        $db_name = $this->get_db_name($db_name);
+        $db_prefix = $this->get_db_prefix($db_prefix);
+
+        /* Store prefix */
+        $this->table_prefix = $table_prefix;
+
+        /* Switch values */
+        $wpdb->select($db_name);
+        $wpdb->set_prefix($db_prefix);
+    }
+
+    public function disconnect() {
+        global $wpdb, $table_prefix;
+
+        /* Switch back values */
+        $wpdb->select(DB_NAME);
+        $wpdb->set_prefix($this->table_prefix);
+        $table_prefix = $this->table_prefix;
+    }
+
+    /* Getters */
+
+    /**
+     * Try to load automatically DB Name
+     */
+    public function get_db_name($db_name) {
+        if (!$db_name) {
+            try {
+                $db_name = OLD_DB_NAME;
+            } catch (Exception $e) {
+                var_dump($e);
+                die;
+            }
+        }
+        return $db_name;
+    }
+
+    /**
+     * Try to load automatically DB Prefix
+     */
+    public function get_db_prefix($db_prefix) {
+        if (!$db_prefix) {
+            try {
+                $db_prefix = OLD_DB_PREFIX;
+            } catch (Exception $e) {
+                var_dump($e);
+                die;
+            }
+        }
+        return $db_prefix;
     }
 
 }
