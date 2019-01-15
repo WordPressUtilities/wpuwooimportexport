@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.26.0
+Version: 0.26.1
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -622,6 +622,12 @@ class WPUWooImportExport {
       Utilities
     ---------------------------------------------------------- */
 
+    public function print_message($message = '') {
+        $message = is_array($message) ? implode("\t", $message) : $message;
+        echo $message;
+        $this->line_break();
+    }
+
     public function line_break() {
         echo "\n";
         @flush();
@@ -649,6 +655,23 @@ class WPUWooImportExport {
             |  \xF4[\x80-\x8F][\x80-\xBF]{2}     # plane 16
         )*$%xs', $string);
 
+    }
+
+    public function remove_images($content) {
+
+        /* - Remove captions */
+        $content = preg_replace('/\[caption(.*)\[\/caption\]/isU', '', $content);
+
+        /* - Remove remaining images */
+        $content = preg_replace("/<p([^>]*)>([\s]*)<a([^>]*)>([\s]*)<img([^>]*)>([\s]*)<\/a>([\s]*)<\/p>/", "\n\n", $content);
+        $content = preg_replace("/<a([^>]*)>([\s]*)<img([^>]*)>([\s]*)<\/a>/", "\n\n", $content);
+        $content = preg_replace("/<p([^>]*)>([\s]*)<img([^>]*)>([\s]*)<\/p>/", "\n\n", $content);
+        $content = preg_replace("/<img([^>]*)>/", "\n\n", $content);
+
+        /* - Remove multiple line breaks */
+        $content = preg_replace("/([\r\n]{3,})/", "\n\n", $content);
+
+        return $content;
     }
 
     /* ----------------------------------------------------------
