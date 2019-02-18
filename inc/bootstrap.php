@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.26.1
+Version: 0.26.2
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -726,6 +726,7 @@ class WPUWooImportExport {
  */
 class WPUWooImportExport_WPDBOverride {
     private $table_prefix;
+    private $wpdb_tmp;
 
     public function __construct($autoload = true) {
         if ($autoload) {
@@ -739,23 +740,32 @@ class WPUWooImportExport_WPDBOverride {
 
     /* Login / Logout */
 
-    public function connect($db_name = false, $db_prefix = false) {
+    public function connect($db_name = false, $db_prefix = false, $db_user = false, $db_password = false, $db_host = false) {
         global $wpdb, $table_prefix;
 
         /* Get values */
         $db_name = $this->get_db_name($db_name);
         $db_prefix = $this->get_db_prefix($db_prefix);
+        $db_user = $this->get_db_user($db_user);
+        $db_password = $this->get_db_password($db_password);
+        $db_host = $this->get_db_host($db_host);
 
-        /* Store prefix */
+        /* Backup old database */
+        $this->wpdb_tmp = $wpdb;
+
+        /* Store old prefix */
         $this->table_prefix = $table_prefix;
 
         /* Switch values */
+        $wpdb = new wpdb($db_user, $db_password, $db_name, $db_host);
         $wpdb->select($db_name);
         $wpdb->set_prefix($db_prefix);
     }
 
     public function disconnect() {
         global $wpdb, $table_prefix;
+        /* Restore db */
+         $wpdb = $this->wpdb_tmp;
 
         /* Switch back values */
         $wpdb->select(DB_NAME);
@@ -793,6 +803,51 @@ class WPUWooImportExport_WPDBOverride {
             }
         }
         return $db_prefix;
+    }
+
+    /**
+     * Try to load automatically DB User
+     */
+    public function get_db_user($db_user) {
+        if (!$db_user) {
+            try {
+                $db_user = OLD_DB_USER;
+            } catch (Exception $e) {
+                var_dump($e);
+                die;
+            }
+        }
+        return $db_user;
+    }
+
+    /**
+     * Try to load automatically DB Password
+     */
+    public function get_db_password($db_password) {
+        if (!$db_password) {
+            try {
+                $db_password = OLD_DB_PASSWORD;
+            } catch (Exception $e) {
+                var_dump($e);
+                die;
+            }
+        }
+        return $db_password;
+    }
+
+    /**
+     * Try to load automatically DB Host
+     */
+    public function get_db_host($db_host) {
+        if (!$db_host) {
+            try {
+                $db_host = OLD_DB_HOST;
+            } catch (Exception $e) {
+                var_dump($e);
+                die;
+            }
+        }
+        return $db_host;
     }
 
 }
