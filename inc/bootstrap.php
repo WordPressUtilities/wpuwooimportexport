@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.26.2
+Version: 0.26.3
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -264,6 +264,52 @@ class WPUWooImportExport {
         foreach ($data['metas'] as $key => $var) {
             update_post_meta($post_id, $key, $var);
         }
+    }
+
+    /**
+     * Quicker add_user_meta function
+     * @param int    $user_id
+     * @param string $meta_key
+     * @param string $meta_value
+     */
+    public function add_user_meta($user_id, $meta_key, $meta_value) {
+        global $wpdb;
+        $wpdb->insert(
+            $wpdb->usermeta,
+            array(
+                'user_id' => $user_id,
+                'meta_key' => $meta_key,
+                'meta_value' => $meta_value
+            ),
+            array(
+                '%d',
+                '%s',
+                '%s'
+            )
+        );
+    }
+
+    /**
+     * Quicker add_term_meta function
+     * @param int    $term_id
+     * @param string $meta_key
+     * @param string $meta_value
+     */
+    public function add_term_meta($term_id, $meta_key, $meta_value) {
+        global $wpdb;
+        $wpdb->insert(
+            $wpdb->termmeta,
+            array(
+                'term_id' => $term_id,
+                'meta_key' => $meta_key,
+                'meta_value' => $meta_value
+            ),
+            array(
+                '%d',
+                '%s',
+                '%s'
+            )
+        );
     }
 
     /* ----------------------------------------------------------
