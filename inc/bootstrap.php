@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.26.3
+Version: 0.26.4
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -267,6 +267,22 @@ class WPUWooImportExport {
     }
 
     /**
+     * Set a post meta with multiple values
+     * @param int    $post_id
+     * @param string $meta_key
+     * @param array  $meta_values
+     */
+    public function set_post_meta_multiple_values($post_id, $meta_key, $meta_values = array()) {
+        delete_post_meta($post_id, $meta_key);
+        foreach ($meta_values as $value) {
+            add_post_meta($post_id, $meta_key, $value);
+        }
+    }
+
+    /* Quicker meta add
+    -------------------------- */
+
+    /**
      * Quicker add_user_meta function
      * @param int    $user_id
      * @param string $meta_key
@@ -287,6 +303,31 @@ class WPUWooImportExport {
                 '%s'
             )
         );
+        return $wpdb->insert_id;
+    }
+
+    /**
+     * Quicker add_post_meta function
+     * @param int    $post_id
+     * @param string $meta_key
+     * @param string $meta_value
+     */
+    public function add_post_meta($post_id, $meta_key, $meta_value) {
+        global $wpdb;
+        $wpdb->insert(
+            $wpdb->postmeta,
+            array(
+                'post_id' => $post_id,
+                'meta_key' => $meta_key,
+                'meta_value' => $meta_value
+            ),
+            array(
+                '%d',
+                '%s',
+                '%s'
+            )
+        );
+        return $wpdb->insert_id;
     }
 
     /**
@@ -310,6 +351,7 @@ class WPUWooImportExport {
                 '%s'
             )
         );
+        return $wpdb->insert_id;
     }
 
     /* ----------------------------------------------------------
@@ -811,7 +853,7 @@ class WPUWooImportExport_WPDBOverride {
     public function disconnect() {
         global $wpdb, $table_prefix;
         /* Restore db */
-         $wpdb = $this->wpdb_tmp;
+        $wpdb = $this->wpdb_tmp;
 
         /* Switch back values */
         $wpdb->select(DB_NAME);
