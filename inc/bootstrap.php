@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.26.4
+Version: 0.27.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -85,6 +85,42 @@ class WPUWooImportExport {
     public $user_keys = array('user_pass', 'user_login', 'user_nicename', 'user_url', 'user_email', 'display_name', 'nickname', 'first_name', 'last_name');
 
     public function __construct() {
+    }
+
+    /* ----------------------------------------------------------
+      CREATE OR UPDATE
+    ---------------------------------------------------------- */
+
+    public function create_or_update_post_from_datas($data = array(), $search = array()) {
+        if (empty($search) || !is_array($search)) {
+            return false;
+        }
+
+        if (!isset($data['post_type'])) {
+            $data['post_type'] = 'post';
+        }
+
+        $args = array(
+            'posts_per_page' => 1,
+            'post_type' => $data['post_type'],
+            'meta_query' => array(
+                'relation' => 'AND'
+            )
+        );
+
+        foreach ($search as $key => $value) {
+            $args['meta_query'][] = array(
+                'key' => $key,
+                'value' => $value,
+                'compare' => '='
+            );
+        }
+        $results = get_posts($args);
+        if (!$results || !isset($results[0])) {
+            return $this->create_post_from_data($data);
+        }
+
+        return $this->update_post_from_data($results[0]->ID, $data);
     }
 
     /* ----------------------------------------------------------
