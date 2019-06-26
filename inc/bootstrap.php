@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.27.0
+Version: 0.27.1
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -670,12 +670,8 @@ class WPUWooImportExport {
      * @return boolean             Success of the transfer
      */
     public function send_file_to_ftp($file, $remotefile, $host, $user, $password, $port = 21) {
-        $conn_id = ftp_connect($host, $port);
+        $conn_id = $this->get_connect_id($host, $user, $password, $port);
         if (!$conn_id) {
-            return false;
-        }
-        if (!ftp_login($conn_id, $user, $password)) {
-            ftp_close($conn_id);
             return false;
         }
         ftp_pasv($conn_id, true);
@@ -695,16 +691,54 @@ class WPUWooImportExport {
      * @return boolean             Success of the transfer
      */
     public function get_file_from_ftp($file, $remotefile, $host, $user, $password, $port = 21) {
-        $conn_id = ftp_connect($host, $port);
+        $conn_id = $this->get_connect_id($host, $user, $password, $port);
         if (!$conn_id) {
-            return false;
-        }
-        if (!ftp_login($conn_id, $user, $password)) {
-            ftp_close($conn_id);
             return false;
         }
         $return = ftp_get($conn_id, $file, $remotefile, FTP_BINARY);
         ftp_close($conn_id);
+    }
+
+    /**
+     * Get a file list from FTP
+     * @param  [type]  $folder   [description]
+     * @param  [type]  $host     [description]
+     * @param  [type]  $user     [description]
+     * @param  [type]  $password [description]
+     * @param  integer $port     [description]
+     * @return [type]            [description]
+     */
+    public function get_file_list_from_ftp($folder, $host, $user, $password, $port = 21) {
+        $conn_id = $this->get_connect_id($host, $user, $password, $port);
+        if (!$conn_id) {
+            return false;
+        }
+        ftp_pasv($conn_id, true);
+        $contents = ftp_nlist($conn_id, $folder);
+        ftp_close($conn_id);
+        return $contents;
+    }
+
+    /**
+     * Get a FTP Connect ID
+     * @param  [type]  $host     [description]
+     * @param  [type]  $user     [description]
+     * @param  [type]  $password [description]
+     * @param  integer $port     [description]
+     * @return [type]            [description]
+     */
+    public function get_connect_id($host, $user, $password, $port = 21) {
+        $conn_id = ftp_connect($host, $port);
+        if (!$conn_id) {
+            error_log('FTP Connect did not work');
+            return false;
+        }
+        if (!ftp_login($conn_id, $user, $password)) {
+            error_log('FTP Login did not work');
+            ftp_close($conn_id);
+            return false;
+        }
+        return $conn_id;
     }
 
     /* ----------------------------------------------------------
