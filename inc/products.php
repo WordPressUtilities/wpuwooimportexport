@@ -1,7 +1,7 @@
 <?php
 
 /*
-* PRODUCTS V 0.6.4
+* PRODUCTS V 0.6.5
 */
 
 /*
@@ -91,9 +91,9 @@ class WPUWooImportExport_Products extends WPUWooImportExport {
                 $variable_product = new WC_Product_Variable($product_post->ID);
                 $variations = $variable_product->get_available_variations();
                 foreach ($variations as $variation_post) {
-                    $product_var = wc_get_product($variation_post['id']);
+                    $product_var = wc_get_product($variation_post['variation_id']);
                     $product_item = array(
-                        'id' => $variation_post['id'],
+                        'id' => $variation_post['variation_id'],
                         'title' => $product_post->post_title . ' - ' . implode(' - ', $product_var->get_attributes()),
                         'attributes' => implode('/', $product_var->get_attributes()),
                         'parent' => $product_post->ID,
