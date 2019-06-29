@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.27.2
+Version: 0.27.3
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -671,12 +671,12 @@ class WPUWooImportExport {
      * @param  integer $port       FTP Port
      * @return boolean             Success of the transfer
      */
-    public function send_file_to_ftp($file, $remotefile, $host, $user, $password, $port = 21) {
+    public function send_file_to_ftp($file, $remotefile, $host, $user, $password, $port = 21, $passive = true) {
         $conn_id = $this->get_connect_id($host, $user, $password, $port);
         if (!$conn_id) {
             return false;
         }
-        ftp_pasv($conn_id, true);
+        ftp_pasv($conn_id, $passive);
         $upload = ftp_put($conn_id, $remotefile, $file, FTP_ASCII);
         ftp_close($conn_id);
         return $upload;
@@ -710,12 +710,12 @@ class WPUWooImportExport {
      * @param  integer $port     [description]
      * @return [type]            [description]
      */
-    public function get_file_list_from_ftp($folder, $host, $user, $password, $port = 21) {
+    public function get_file_list_from_ftp($folder, $host, $user, $password, $port = 21, $passive = true) {
         $conn_id = $this->get_connect_id($host, $user, $password, $port);
         if (!$conn_id) {
             return false;
         }
-        ftp_pasv($conn_id, true);
+        ftp_pasv($conn_id, $passive);
         $contents = ftp_nlist($conn_id, $folder);
         ftp_close($conn_id);
         return $contents;
