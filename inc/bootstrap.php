@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.27.3
+Version: 0.27.4
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -103,6 +103,11 @@ class WPUWooImportExport {
         $args = array(
             'posts_per_page' => 1,
             'post_type' => $data['post_type'],
+            'post_status' => apply_filters('wpuwooimportexport_create_or_update_post_status', array(
+                'publish',
+                'private',
+                'future'
+            )),
             'meta_query' => array(
                 'relation' => 'AND'
             )
