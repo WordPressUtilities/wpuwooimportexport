@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.27.4
+Version: 0.28.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -81,7 +81,7 @@ if ($wpuwooimportexport_is_bootstraped && !isset($keepmails)) {
 
 class WPUWooImportExport {
 
-    public $post_keys = array('post_title', 'post_content', 'post_type', 'post_status');
+    public $post_keys = array('post_title', 'post_content', 'post_type', 'post_status', 'post_date', 'post_date_gmt');
     public $user_keys = array('user_pass', 'user_login', 'user_nicename', 'user_url', 'user_email', 'display_name', 'nickname', 'first_name', 'last_name');
 
     public function __construct() {
@@ -395,6 +395,31 @@ class WPUWooImportExport {
             )
         );
         return $wpdb->insert_id;
+    }
+
+    /* ----------------------------------------------------------
+      SYNC SQL LINES
+    ---------------------------------------------------------- */
+
+    public function update_or_create_sql($data, $table) {
+        global $wpdb;
+        $_table = $wpdb->prefix . $table;
+        $var = $wpdb->get_var($wpdb->prepare("SELECT id FROM $_table WHERE uniqid=%s", $data['uniqid']));
+        /* Create */
+        if (!$var) {
+            $wpdb->insert(
+                $_table,
+                $data
+            );
+        }
+        /* Update */
+        else {
+            $wpdb->update(
+                $_table,
+                $data,
+                array('ID' => $var)
+            );
+        }
     }
 
     /* ----------------------------------------------------------
