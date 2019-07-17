@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.28.0
+Version: 0.29.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -81,7 +81,7 @@ if ($wpuwooimportexport_is_bootstraped && !isset($keepmails)) {
 
 class WPUWooImportExport {
 
-    public $post_keys = array('post_title', 'post_content', 'post_type', 'post_status', 'post_date', 'post_date_gmt');
+    public $post_keys = array('post_title', 'post_content', 'post_type', 'post_status', 'post_date', 'post_date_gmt', 'post_parent');
     public $user_keys = array('user_pass', 'user_login', 'user_nicename', 'user_url', 'user_email', 'display_name', 'nickname', 'first_name', 'last_name');
 
     public function __construct() {
@@ -125,6 +125,8 @@ class WPUWooImportExport {
             return $this->create_post_from_data($data);
         }
 
+        $data = apply_filters('wpuwooimportexport_create_or_update_post_data_before_update', $data);
+
         return $this->update_post_from_data($results[0]->ID, $data);
     }
 
@@ -140,6 +142,9 @@ class WPUWooImportExport {
         $post_obj = array();
         foreach ($data as $key => $var) {
             if ($key == 'metas') {
+                continue;
+            }
+            if ($key == 'terms') {
                 continue;
             }
             $post_obj[$key] = $var;
@@ -166,6 +171,9 @@ class WPUWooImportExport {
 
         /* Metas */
         $this->set_post_metas($post_id, $data);
+
+        /* Terms */
+        $this->set_post_terms($post_id, $data);
 
         return $post_id;
 
@@ -257,7 +265,11 @@ class WPUWooImportExport {
             $data['metas'][$key] = $var;
         }
 
+        /* Metas */
         $this->set_post_metas($post_id, $data);
+
+        /* Terms */
+        $this->set_post_terms($post_id, $data);
 
         /* If post keys are available : use them to reload content */
         if (!empty($post_keys)) {
@@ -319,6 +331,18 @@ class WPUWooImportExport {
         delete_post_meta($post_id, $meta_key);
         foreach ($meta_values as $value) {
             add_post_meta($post_id, $meta_key, $value);
+        }
+    }
+
+    /* Term metas
+    -------------------------- */
+
+    public function set_post_terms($post_id, $data) {
+        if (!isset($data['terms']) || !is_array($data['terms'])) {
+            return;
+        }
+        foreach ($data['terms'] as $tax_slug => $terms) {
+            wp_set_post_terms($post_id, $terms, $tax_slug, false);
         }
     }
 
