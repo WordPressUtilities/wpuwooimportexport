@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.29.0
+Version: 0.29.1
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -428,7 +428,18 @@ class WPUWooImportExport {
     public function update_or_create_sql($data, $table) {
         global $wpdb;
         $_table = $wpdb->prefix . $table;
-        $var = $wpdb->get_var($wpdb->prepare("SELECT id FROM $_table WHERE uniqid=%s", $data['uniqid']));
+
+        $cache_id = 'update_or_create_sql_' . $table . $data['uniqid'];
+
+        // GET CACHED VALUE
+        $var = wp_cache_get($cache_id);
+        if ($var === false) {
+            // COMPUTE RESULT
+            $var = $wpdb->get_var($wpdb->prepare("SELECT id FROM $_table WHERE uniqid=%s", $data['uniqid']));
+            // CACHE RESULT
+            wp_cache_set($cache_id, $var, '', 60);
+        }
+
         /* Create */
         if (!$var) {
             $wpdb->insert(
@@ -572,12 +583,14 @@ class WPUWooImportExport {
         }
         /* Delete all */
         $posts = get_posts(array(
+            'fields' => 'ids',
             'post_type' => $post_type,
             'post_status' => 'any',
             'numberposts' => -1
         ));
         foreach ($posts as $post_item) {
-            wp_delete_post($post_item->ID, true);
+            error_log('Deleting post type ' . $post_type . ' #' . $post_item);
+            wp_delete_post($post_item, true);
         }
         return true;
     }
