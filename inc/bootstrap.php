@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.29.1
+Version: 0.29.2
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -674,7 +674,7 @@ class WPUWooImportExport {
       GET DATAS
     ---------------------------------------------------------- */
 
-    public function get_datas_from_csv($csv_file, $use_first_line = true, $delimiter = ",", $enclosure = '"') {
+    public function get_datas_from_csv($csv_file, $use_first_line = true, $delimiter = ",", $enclosure = '"', $allow_numbers = false) {
         if (!file_exists($csv_file)) {
             error_log('CSV File do not exists');
             return false;
@@ -693,7 +693,14 @@ class WPUWooImportExport {
                     if ($i == 0) {
                         foreach ($data_line_raw as $ii => $model_key) {
                             $line_text = strtolower(str_replace(' ', '_', $model_key));
+                            if($allow_numbers){
+                            $line_text = preg_replace('/([^0-9a-z_]+)/', '', $line_text);
+
+                            }
+                            else {
                             $line_text = preg_replace('/([^a-z_]+)/', '', $line_text);
+
+                            }
                             $model_line[$ii] = !empty($line_text) ? $line_text : 'line' . $ii;
                         }
                     } else {
