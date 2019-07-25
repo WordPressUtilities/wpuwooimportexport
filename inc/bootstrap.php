@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.29.2
+Version: 0.30.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -547,6 +547,30 @@ class WPUWooImportExport {
 
     }
 
+    public function upload_if_not_exists($file, $reference_name) {
+        global $wpdb;
+        $meta_key = 'wpuwoo_imgbasename';
+
+        $reference_name = strtolower($reference_name);
+
+        /* Search image in database */
+        $image_id = $wpdb->get_var($wpdb->prepare("SELECT post_id FROM {$wpdb->prefix}postmeta WHERE meta_key = %s AND meta_value=%s", $meta_key, $reference_name));
+
+        /* If not found */
+        if (!is_numeric($image_id)) {
+
+            /* Upload image */
+            $image_id = $this->upload_file($file);
+
+            /* Save reference name */
+            add_post_meta($image_id, $meta_key, $reference_name);
+
+        }
+
+        return $image_id;
+
+    }
+
     /* ----------------------------------------------------------
       GET SETTINGS FROM CLI
     ---------------------------------------------------------- */
@@ -693,12 +717,11 @@ class WPUWooImportExport {
                     if ($i == 0) {
                         foreach ($data_line_raw as $ii => $model_key) {
                             $line_text = strtolower(str_replace(' ', '_', $model_key));
-                            if($allow_numbers){
-                            $line_text = preg_replace('/([^0-9a-z_]+)/', '', $line_text);
+                            if ($allow_numbers) {
+                                $line_text = preg_replace('/([^0-9a-z_]+)/', '', $line_text);
 
-                            }
-                            else {
-                            $line_text = preg_replace('/([^a-z_]+)/', '', $line_text);
+                            } else {
+                                $line_text = preg_replace('/([^a-z_]+)/', '', $line_text);
 
                             }
                             $model_line[$ii] = !empty($line_text) ? $line_text : 'line' . $ii;
