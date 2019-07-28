@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.30.1
+Version: 0.31.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -90,6 +90,92 @@ class WPUWooImportExport {
     /* ----------------------------------------------------------
       CREATE OR UPDATE
     ---------------------------------------------------------- */
+
+    /* Term
+    -------------------------- */
+
+    /**
+     $term_id = $this->create_or_update_term_from_datas(array(
+         'term_name' => 'My Term',
+         'taxonomy' => 'category',
+         'metas' => array(
+             'my_meta_key' => 'Value'
+         )
+     ), array(
+         'uniqid' => '121234'
+     ));
+     */
+
+    public function create_or_update_term_from_datas($data = array(), $search = array()) {
+        if (empty($search) || !is_array($search)) {
+            return false;
+        }
+        if (!isset($data['taxonomy'])) {
+            $data['taxonomy'] = 'category';
+        }
+        if (!isset($data['term_name'])) {
+            return false;
+        }
+        if (!isset($data['metas']) || !is_array($data['metas'])) {
+            $data['metas'] = array();
+        }
+
+        /* Obtain post by uniqid */
+        $args = array(
+            'hide_empty' => false,
+            'meta_query' => array()
+        );
+        foreach ($search as $key => $value) {
+            $args['meta_query'][] = array(
+                'key' => $key,
+                'value' => $value,
+                'compare' => '='
+            );
+        }
+        $terms = get_terms($data['taxonomy'], $args);
+
+        /* Create term */
+        if (empty($terms) || is_wp_error($terms)) {
+            $term = wp_insert_term($data['term_name'], $data['taxonomy']);
+            if (is_wp_error($term)) {
+                return false;
+            }
+
+            /* Add Uniqid */
+            foreach ($search as $key => $value) {
+                $this->add_term_meta($term['term_id'], $key, $value);
+            }
+
+            /* Add Metas */
+            foreach ($data['metas'] as $key => $value) {
+                $this->add_term_meta($term['term_id'], $key, $value);
+            }
+
+            return $term['term_id'];
+
+        } else {
+            $_term_id = $terms[0]->term_id;
+
+            /* Update term basic informations */
+            $term = wp_update_term($_term_id, $data['taxonomy'], array(
+                'name' => $data['term_name']
+            ));
+            if (is_wp_error($term)) {
+                return false;
+            }
+
+            /* Update Metas */
+            foreach ($data['metas'] as $key => $value) {
+                update_term_meta($_term_id, $key, $value);
+            }
+
+            return $_term_id;
+        }
+
+    }
+
+    /* Post
+    -------------------------- */
 
     public function create_or_update_post_from_datas($data = array(), $search = array()) {
         if (empty($search) || !is_array($search)) {
