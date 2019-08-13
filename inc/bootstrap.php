@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.31.0
+Version: 0.32.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -687,20 +687,41 @@ class WPUWooImportExport {
       DELETE POST TYPE
     ---------------------------------------------------------- */
 
-    public function delete_post_type($post_type = '') {
+    public function delete_post_type($post_type = '', $args = array()) {
         if (!$post_type) {
             return false;
         }
+
+        if (!is_array($args)) {
+            $args = array();
+        }
+        if (!isset($args['debug_type'])) {
+            $args['debug_type'] = 'log';
+        }
+        if (!isset($args['post_status'])) {
+            $args['post_status'] = 'any';
+        }
+
         /* Delete all */
         $posts = get_posts(array(
             'fields' => 'ids',
             'post_type' => $post_type,
-            'post_status' => 'any',
+            'post_status' => $args['post_status'],
             'numberposts' => -1
         ));
-        foreach ($posts as $post_item) {
-            error_log('Deleting post type ' . $post_type . ' #' . $post_item);
+        $total = count($posts);
+        foreach ($posts as $i => $post_item) {
+            $message = ($i + 1) . '/' . $total . ' : Deleting post type ' . $post_type . ' #' . $post_item;
             wp_delete_post($post_item, true);
+            switch ($args['debug_type']) {
+            case 'print':
+            case 'message':
+                $this->print_message($message);
+                break;
+            default:
+                error_log($message);
+            }
+
         }
         return true;
     }
@@ -783,6 +804,20 @@ class WPUWooImportExport {
     /* ----------------------------------------------------------
       GET DATAS
     ---------------------------------------------------------- */
+
+    public function get_datas_from_json($json_file) {
+        if (!file_exists($json_file)) {
+            error_log('JSON File do not exists');
+            return false;
+        }
+        $raw_data = file_get_contents($json_file);
+        $data = json_decode($raw_data, true);
+        if (!is_array($data)) {
+            error_log('Invalid JSON file :' . basename($json_file));
+            return false;
+        }
+        return $data;
+    }
 
     public function get_datas_from_csv($csv_file, $use_first_line = true, $delimiter = ",", $enclosure = '"', $allow_numbers = false) {
         if (!file_exists($csv_file)) {
