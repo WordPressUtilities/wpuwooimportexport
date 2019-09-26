@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.32.1
+Version: 0.32.2
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -659,7 +659,12 @@ class WPUWooImportExport {
         $reference_name = strtolower($reference_name);
 
         /* Search image in database */
-        $image_id = $wpdb->get_var($wpdb->prepare("SELECT post_id FROM {$wpdb->prefix}postmeta WHERE meta_key = %s AND meta_value=%s", $meta_key, $reference_name));
+        $cache_id = 'wpuwoo_imgbasename_' . md5($reference_name);
+        $image_id = wp_cache_get($cache_id);
+        if ($image_id === false) {
+            $image_id = $wpdb->get_var($wpdb->prepare("SELECT post_id FROM {$wpdb->prefix}postmeta WHERE meta_key = %s AND meta_value=%s", $meta_key, $reference_name));
+            wp_cache_set($cache_id, $image_id, '', DAY_IN_SECONDS);
+        }
 
         /* If not found */
         if (!is_numeric($image_id)) {
