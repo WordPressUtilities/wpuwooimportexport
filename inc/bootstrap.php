@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.32.5
+Version: 0.33.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -191,9 +191,7 @@ class WPUWooImportExport {
             return false;
         }
 
-        if (!isset($data['post_type'])) {
-            $data['post_type'] = 'post';
-        }
+        $data = $this->prepare_post_data($data);
 
         $args = array(
             'posts_per_page' => 1,
@@ -244,6 +242,109 @@ class WPUWooImportExport {
         return $return;
     }
 
+    /* Prepare post datas
+    -------------------------- */
+
+    public function prepare_post_data($data = array()) {
+        if (!is_array($data)) {
+            echo 'Invalid data';
+            die;
+        }
+
+        /* Filter values */
+        if (isset($data['post_title'])) {
+            $data['post_title'] = wp_strip_all_tags($data['post_title']);
+        }
+
+        if (!isset($data['post_status'])) {
+            $data['post_status'] = 'publish';
+        }
+
+        if (!isset($data['post_type'])) {
+            $data['post_type'] = 'post';
+        }
+
+        /* Terms */
+        if (!isset($data['terms'])) {
+            $data['terms'] = array();
+        }
+
+        foreach ($data as $key => $value) {
+            if (substr($key, 0, 6) == 'term__') {
+                $data['terms'][substr($key, 6)] = $value;
+            }
+        }
+
+        /* Metas */
+        if (!isset($data['metas'])) {
+            $data['metas'] = array();
+        }
+
+        foreach ($data as $key => $value) {
+            if (substr($key, 0, 6) == 'meta__') {
+                $data['metas'][substr($key, 6)] = $value;
+            }
+            /* Not a native post key : use as meta */
+            if ($key != 'metas' && !in_array($key, $this->post_keys) && !is_array($value) && substr($key, 0, 6) != 'term__') {
+                $data['metas'][$key] = $value;
+            }
+        }
+
+        return $data;
+
+    }
+
+    /* ----------------------------------------------------------
+      SYNC
+    ---------------------------------------------------------- */
+
+    public function sync_posts_from_csv($csv_file, $settings = array()) {
+
+        /* Settings */
+        if (!is_array($settings)) {
+            $settings = array();
+        }
+        if (!isset($settings['debug_type'])) {
+            $settings['debug_type'] = '';
+        }
+
+        /* Try to extract datas */
+        $datas = $this->get_datas_from_csv($csv_file);
+        if (!is_array($datas)) {
+            $this->debug_message("Invalid file provided", $settings['debug_type']);
+            return;
+        }
+
+        /* Parse datas */
+        $nb_posts = count($datas);
+        foreach ($datas as $i => $data) {
+
+            $ii = $i + 1;
+            $total = "${ii}/{$nb_posts}";
+
+            $status = 'created';
+            if (isset($data['uniqid'])) {
+                $return = $this->create_or_update_post_from_datas($data, array(
+                    'uniqid' => $data['uniqid']
+                ), false, true);
+                $post_id = false;
+                if (is_array($return) && isset($return[1]) && is_numeric($return[1])) {
+                    $status = $return[0];
+                    $post_id = $return[1];
+                }
+            } else {
+                $post_id = $this->create_post_from_data($data);
+            }
+
+            /* Create post */
+            if (is_numeric($post_id)) {
+                $this->debug_message($total . "\t - Post #${post_id} " . $status . " !", $settings['debug_type']);
+            } else {
+                $this->debug_message($total . "\t - Post could not be created", $settings['debug_type']);
+            }
+        }
+    }
+
     /* ----------------------------------------------------------
       CREATE
     ---------------------------------------------------------- */
@@ -254,6 +355,9 @@ class WPUWooImportExport {
     public function create_post_from_data($data = array()) {
         $post_id = false;
         $post_obj = array();
+
+        $data = $this->prepare_post_data($data);
+
         foreach ($data as $key => $var) {
             if ($key == 'metas') {
                 continue;
@@ -266,15 +370,6 @@ class WPUWooImportExport {
 
         if (empty($post_obj)) {
             return false;
-        }
-
-        /* Filter values */
-        if (isset($data['post_title'])) {
-            $data['post_title'] = wp_strip_all_tags($data['post_title']);
-        }
-
-        if (!isset($data['post_status'])) {
-            $data['post_status'] = 'publish';
         }
 
         /* Insert post */
@@ -315,35 +410,20 @@ class WPUWooImportExport {
     ---------------------------------------------------------- */
 
     public function set_post_data_from_model($data = array(), $model = array()) {
-        if (!is_array($data)) {
-            $data = array();
-        }
-
-        if (!isset($data['metas'])) {
-            $data['metas'] = array();
-        }
 
         /* Add missing post model items */
         foreach ($model as $key => $var) {
-            if (isset($data[$key])) {
-                continue;
-            }
-            /* Save post key */
-            $data[$key] = $var;
+            $data[$key] = isset($data[$key]) ? $data[$key] : $var;
         }
 
-        $data_new = $data;
-        /* Move useless items */
-        foreach ($data_new as $key => $var) {
-            /* Not a native post key : use as meta */
-            if ($key != 'metas' && !in_array($key, $this->post_keys)) {
-                $data['metas'][$key] = $var;
-                unset($data[$key]);
-            }
-        }
+        /* Prepare data */
+        $data = $this->prepare_post_data($data);
 
-        foreach ($model['metas'] as $key => $var) {
-            $data['metas'][$key] = isset($data['metas'][$key]) ? $data['metas'][$key] : $var;
+        /* Add missing model metas */
+        if (isset($model['metas']) && is_array($model['metas'])) {
+            foreach ($model['metas'] as $key => $var) {
+                $data['metas'][$key] = isset($data['metas'][$key]) ? $data['metas'][$key] : $var;
+            }
         }
 
         return $data;
@@ -358,25 +438,13 @@ class WPUWooImportExport {
 
     public function update_post_from_data($post_id, $data = array()) {
 
-        if (!isset($data['metas'])) {
-            $data['metas'] = array();
-        }
+        $data = $this->prepare_post_data($data);
 
         $post_keys = array();
         foreach ($data as $key => $var) {
-
-            if ($key == 'metas') {
-                continue;
-            }
-
-            /* Avoid post keys */
             if (in_array($key, $this->post_keys)) {
                 $post_keys[$key] = $var;
-                continue;
             }
-
-            /* Column is a postmeta */
-            $data['metas'][$key] = $var;
         }
 
         /* Metas */
@@ -748,15 +816,7 @@ class WPUWooImportExport {
         foreach ($posts as $i => $post_item) {
             $message = ($i + 1) . '/' . $total . ' : Deleting post type ' . $post_type . ' #' . $post_item;
             wp_delete_post($post_item, true);
-            switch ($args['debug_type']) {
-            case 'print':
-            case 'message':
-                $this->print_message($message);
-                break;
-            default:
-                error_log($message);
-            }
-
+            $this->debug_message($debug_message, $args['debug_type']);
         }
         return true;
     }
@@ -1034,6 +1094,22 @@ class WPUWooImportExport {
     /* ----------------------------------------------------------
       Utilities
     ---------------------------------------------------------- */
+
+    public function debug_message($message = '', $debug_type = '') {
+        switch ($debug_type) {
+        case 'all':
+            $this->print_message($message);
+            error_log($message);
+        case 'print':
+        case 'message':
+            $this->print_message($message);
+            break;
+        case 'log':
+        default:
+            error_log($message);
+        }
+
+    }
 
     public function print_message($message = '') {
         $message = is_array($message) ? implode("\t", $message) : $message;
