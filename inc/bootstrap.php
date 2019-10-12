@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.32.4
+Version: 0.32.5
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -182,9 +182,10 @@ class WPUWooImportExport {
      * @param  array   $data          Array of datas for the post.
      * @param  array   $search        Search query to find an existing post
      * @param  boolean $check_uniqid  Check if uniqid exists ( Faster when inserting lot of new posts )
-     * @return mixed                  Post ID or Error
+     * @param  boolean $get_status    Return an array composed of the status created / updated and the post id
+     * @return mixed                  Post ID / array('new',int postid) / Error
      */
-    public function create_or_update_post_from_datas($data = array(), $search = array(), $check_uniqid = false) {
+    public function create_or_update_post_from_datas($data = array(), $search = array(), $check_uniqid = false, $get_status = false) {
         global $wpdb;
         if (empty($search) || !is_array($search)) {
             return false;
@@ -227,12 +228,20 @@ class WPUWooImportExport {
         $results = (($check_uniqid && $uniqid_found) || !$check_uniqid) ? get_posts($args) : array();
 
         if (!$results || !isset($results[0])) {
-            return $this->create_post_from_data($data);
+            $return = $this->create_post_from_data($data);
+            if ($get_status && is_numeric($return)) {
+                $return = array('created', $return);
+            }
+            return $return;
         }
 
         $data = apply_filters('wpuwooimportexport_create_or_update_post_data_before_update', $data);
 
-        return $this->update_post_from_data($results[0]->ID, $data);
+        $return = $this->update_post_from_data($results[0]->ID, $data);
+        if ($get_status && is_numeric($return)) {
+            $return = array('updated', $return);
+        }
+        return $return;
     }
 
     /* ----------------------------------------------------------
@@ -654,7 +663,7 @@ class WPUWooImportExport {
 
     public function upload_if_not_exists($file, $reference_name, $meta_key = false) {
         global $wpdb;
-        if(!$meta_key){
+        if (!$meta_key) {
             $meta_key = 'wpuwoo_imgbasename';
         }
 
