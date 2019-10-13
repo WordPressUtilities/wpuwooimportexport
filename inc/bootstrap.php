@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.33.1
+Version: 0.33.2
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -283,10 +283,19 @@ class WPUWooImportExport {
         foreach ($data as $key => $value) {
             if (substr($key, 0, 6) == 'meta__') {
                 $data['metas'][substr($key, 6)] = $value;
+                continue;
             }
             /* Not a native post key : use as meta */
             if ($key != 'metas' && !in_array($key, $this->post_keys) && !is_array($value) && substr($key, 0, 6) != 'term__') {
                 $data['metas'][$key] = $value;
+            }
+        }
+
+        foreach ($data['metas'] as $key => $value) {
+            if (substr($key, 0, 7) == 'array__') {
+                $data['metas'][substr($key, 7)] = explode(",", $value);
+                unset($data['metas'][$key]);
+                continue;
             }
         }
 
