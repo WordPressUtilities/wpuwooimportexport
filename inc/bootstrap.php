@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.33.2
+Version: 0.33.3
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -251,6 +251,8 @@ class WPUWooImportExport {
             die;
         }
 
+        $data = apply_filters('wpuwooimportexport__prepare_post_data__before', $data);
+
         /* Filter values */
         if (isset($data['post_title'])) {
             $data['post_title'] = wp_strip_all_tags($data['post_title']);
@@ -299,6 +301,8 @@ class WPUWooImportExport {
             }
         }
 
+        $data = apply_filters('wpuwooimportexport__prepare_post_data__after', $data);
+
         return $data;
 
     }
@@ -310,15 +314,26 @@ class WPUWooImportExport {
     public function sync_posts_from_csv($csv_file, $settings = array()) {
 
         /* Settings */
+        $_default_settings = array(
+            'debug_type' => '',
+            'use_first_line' => null,
+            'delimiter' => null,
+            'enclosure' => null,
+            'allow_numbers' => null
+        );
+
         if (!is_array($settings)) {
             $settings = array();
         }
-        if (!isset($settings['debug_type'])) {
-            $settings['debug_type'] = '';
+        foreach ($_default_settings as $key => $setting) {
+            if (!isset($settings[$key])) {
+                $settings[$key] = $setting;
+            }
         }
 
         /* Try to extract datas */
-        $datas = $this->get_datas_from_csv($csv_file);
+        $datas = $this->get_datas_from_csv($csv_file, $settings['use_first_line'], $settings['delimiter'], $settings['enclosure'], $settings['allow_numbers']);
+
         if (!is_array($datas)) {
             $this->debug_message("Invalid file provided", $settings['debug_type']);
             return;
@@ -929,6 +944,19 @@ class WPUWooImportExport {
         if (!file_exists($csv_file)) {
             error_log('CSV File do not exists');
             return false;
+        }
+
+        if (is_null($use_first_line)) {
+            $use_first_line = true;
+        }
+        if (!is_string($delimiter) || is_null($delimiter)) {
+            $delimiter = ",";
+        }
+        if (!is_string($delimiter) || is_null($enclosure)) {
+            $enclosure = '"';
+        }
+        if (is_null($allow_numbers)) {
+            $allow_numbers = false;
         }
 
         /* Clean CSV data */
