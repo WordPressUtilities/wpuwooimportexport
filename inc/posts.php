@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.3.2
+* Posts V 0.3.3
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -107,7 +107,7 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         # GET POST OBJECT
         $post = $this->get_array_from_file($dir['full'] . 'post.json');
         if (!is_array($post)) {
-            echo '# Invalid post';
+            $this->print_message('# Invalid post');
             return false;
         }
 
@@ -128,7 +128,7 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         $new_post_id = wp_insert_post($post);
 
         if (!is_numeric($new_post_id)) {
-            echo '# Post was not created';
+            $this->print_message('# Post was not created');
             return false;
         }
 
@@ -142,14 +142,14 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
                 $att = (array) $att;
                 $filepath = $dir['files'] . $att['filename'];
                 if (!file_exists($filepath)) {
-                    echo '- File does not exists : skipping this.';
+                    $this->print_message('- File does not exists : skipping this.');
                     continue;
                 }
 
                 # LOAD FILE
                 $file_up = $this->upload_file($filepath, $new_post_id);
                 if (!is_numeric($file_up)) {
-                    echo '- File could not be uploaded : skipping this.';
+                    $this->print_message('- File could not be uploaded : skipping this.');
                     continue;
                 }
                 $att['new_id'] = $file_up;
@@ -158,7 +158,7 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
             }
 
         } else {
-            echo '- Attachments are invalid or do not exists : skipping this.';
+            $this->print_message('- Attachments are invalid or do not exists : skipping this.');
         }
 
         $find_attachments_metas = (is_array($options) && isset($options['find_attachments_metas']) && $options['find_attachments_metas']);
