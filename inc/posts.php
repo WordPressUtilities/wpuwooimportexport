@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.3.3
+* Posts V 0.3.4
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -168,6 +168,14 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         foreach ($metas as $key => $value) {
             if (is_array($value)) {
                 $value = $value[0];
+            }
+
+            /* Quick check if value is serialized */
+            if (substr($value, 0, 2) == 'a:') {
+                $test_unserialize_value = unserialize($value);
+                if (is_array($test_unserialize_value)) {
+                    $value = $test_unserialize_value;
+                }
             }
 
             # CONVERT OLD ATT IDS NEW ATT IDS
