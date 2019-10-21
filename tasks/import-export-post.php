@@ -1,8 +1,12 @@
 <?php
 
+/*
+* Import Export Post V 0.1.0
+*/
+
 include dirname(__FILE__) . '/../inc/posts.php';
 
-class WPUWooImportExportTasks_ImportExportPosts extends WPUWooImportExport_Posts {
+class WPUWooImportExportTasks_ImportExportPost extends WPUWooImportExport_Posts {
     private $methods = array(
         'import',
         'export'
@@ -29,4 +33,4 @@ class WPUWooImportExportTasks_ImportExportPosts extends WPUWooImportExport_Posts
 
 }
 
-new WPUWooImportExportTasks_ImportExportPosts();
+new WPUWooImportExportTasks_ImportExportPost();
