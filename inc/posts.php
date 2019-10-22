@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.3.4
+* Posts V 0.3.5
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -90,6 +90,9 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
             $att_dirname = get_attached_file($attachment_raw->ID, 1);
             $att = array(
                 'ID' => $attachment_raw->ID,
+                'post_title' => $attachment_raw->post_title,
+                'post_content' => $attachment_raw->post_content,
+                'post_excerpt' => $attachment_raw->post_excerpt,
                 'filename' => basename(get_attached_file($attachment_raw->ID, 1))
             );
             $attachments[] = $att;
@@ -152,6 +155,21 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
                     $this->print_message('- File could not be uploaded : skipping this.');
                     continue;
                 }
+
+                $update_args = array(
+                    'ID' => $file_up
+                );
+                if (isset($att['post_title'])) {
+                    $update_args['post_title'] = $att['post_title'];
+                }
+                if (isset($att['post_content'])) {
+                    $update_args['post_content'] = $att['post_content'];
+                }
+                if (isset($att['post_excerpt'])) {
+                    $update_args['post_excerpt'] = $att['post_excerpt'];
+                }
+                wp_update_post($update_args);
+
                 $att['new_id'] = $file_up;
                 $_attachments_table[] = $att;
                 $_attachments_link[$att['ID']] = $file_up;
