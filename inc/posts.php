@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.3.6
+* Posts v 0.3.7
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -131,8 +131,10 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         $new_post_id = wp_insert_post($post);
 
         if (!is_numeric($new_post_id)) {
-            $this->print_message('# Post was not created');
+            $this->print_message('# Post was not created.');
             return false;
+        } else {
+            $this->print_message('- Post #' . $new_post_id . ' was created.');
         }
 
         # GET ATTACHMENTS
@@ -140,6 +142,8 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         $_attachments_link = array();
         $attachments = $this->get_array_from_file($dir['full'] . 'attachments.json');
         if (is_array($attachments)) {
+            $this->print_message('- Importing attachments.');
+
             # EXTRACT IDS AND FILES IN A LIST
             foreach ($attachments as $att) {
                 $att = (array) $att;
@@ -150,6 +154,7 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
                 }
 
                 # LOAD FILE
+                $this->print_message('- Uploading #' . $att['ID']);
                 $file_up = $this->upload_file($filepath, $new_post_id);
                 if (!is_numeric($file_up)) {
                     $this->print_message('- File could not be uploaded : skipping this.');
@@ -183,6 +188,7 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
 
         # GET METAS
         $metas = $this->get_array_from_file($dir['full'] . 'metas.json');
+        $this->print_message('- Importing metas.');
         foreach ($metas as $key => $value) {
             if (is_array($value)) {
                 $value = $value[0];
@@ -202,7 +208,9 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
                     return;
                 }
 
+                $is_array = false;
                 if (is_array($value) && count($value) == 1 && isset($value[0]) && is_numeric($value[0])) {
+                    $is_array = true;
                     $value = $value[0];
                 }
 
@@ -219,6 +227,9 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
                 $value = intval($value, 10);
                 if (array_key_exists($value, $_attachments_link)) {
                     $value = $_attachments_link[$value];
+                    if ($is_array) {
+                        $value = array($is_array);
+                    }
                 }
 
             } while (0);

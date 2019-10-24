@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Import Export Post V 0.1.0
+* Import Export Post v 0.1.1
 */
 
 include dirname(__FILE__) . '/../inc/posts.php';
@@ -23,7 +23,7 @@ class WPUWooImportExportTasks_ImportExportPost extends WPUWooImportExport_Posts 
         }
 
         if ($argv[1] == 'import') {
-            $this->import_post($argv[2]);
+            $this->import_post($argv[2], array('find_attachments_metas' => 1));
             $this->print_message('Import ok');
         } else {
             $this->export_post($argv[2]);
