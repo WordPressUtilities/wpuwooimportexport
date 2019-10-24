@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts V 0.3.5
+* Posts V 0.3.6
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -200,6 +200,10 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
             do {
                 if (empty($_attachments_link)) {
                     return;
+                }
+
+                if (is_array($value) && count($value) == 1 && isset($value[0]) && is_numeric($value[0])) {
+                    $value = $value[0];
                 }
 
                 /* IF NUMERIC */
