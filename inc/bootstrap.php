@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.35.3
+Version: 0.35.4
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -1208,6 +1208,15 @@ class WPUWooImportExport {
         $content = preg_replace("/([\r\n]{3,})/", "\n\n", $content);
 
         return $content;
+    }
+
+    /* Thanks to https://stackoverflow.com/a/12109100 */
+    public function glob_recursive($pattern, $flags = 0) {
+        $files = glob($pattern, $flags);
+        foreach (glob(dirname($pattern) . '/*', GLOB_ONLYDIR | GLOB_NOSORT) as $dir) {
+            $files = array_merge($files, $this->glob_recursive($dir . '/' . basename($pattern), $flags));
+        }
+        return $files;
     }
 
     /* ----------------------------------------------------------
