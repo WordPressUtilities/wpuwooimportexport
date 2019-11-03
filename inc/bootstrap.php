@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.35.4
+Version: 0.35.5
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -227,6 +227,10 @@ class WPUWooImportExport {
 
         if (!$results || !isset($results[0])) {
             $return = $this->create_post_from_data($data);
+            /* Cache uniqid "forever" */
+            if (isset($search['uniqid']) && $check_uniqid) {
+                wp_cache_set('wpuwoo_uniqid_' . $search['uniqid'], $return, '');
+            }
             if ($get_status && is_numeric($return)) {
                 $return = array('created', $return);
             }
@@ -236,10 +240,33 @@ class WPUWooImportExport {
         $data = apply_filters('wpuwooimportexport_create_or_update_post_data_before_update', $data);
 
         $return = $this->update_post_from_data($results[0]->ID, $data);
+        if (is_numeric($return) && isset($search['uniqid']) && $check_uniqid) {
+            wp_cache_set('wpuwoo_uniqid_' . $search['uniqid'], $return, '');
+        }
         if ($get_status && is_numeric($return)) {
             $return = array('updated', $return);
         }
         return $return;
+    }
+
+    /* Search uniqid
+    -------------------------- */
+
+    public function get_post_by_uniqid($uniqid = false) {
+        global $wpdb;
+        if (!$uniqid) {
+            return false;
+        }
+        $uniqid_type = is_numeric($uniqid) ? '%d' : '%s';
+
+        $cache_id = 'wpuwoo_uniqid_' . $uniqid;
+        $post_id = wp_cache_get($cache_id);
+        if (!is_numeric($post_id)) {
+            $post_id = $wpdb->get_var($wpdb->prepare("SELECT post_id FROM $wpdb->postmeta WHERE meta_key = %s AND meta_value = $uniqid_type", 'uniqid', $uniqid));
+            wp_cache_set($cache_id, $post_id, '', 3600);
+        }
+
+        return $post_id;
     }
 
     /* Prepare post datas
