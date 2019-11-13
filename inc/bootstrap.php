@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.35.6
+Version: 0.35.7
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -83,6 +83,11 @@ class WPUWooImportExport {
 
     public $post_keys = array('post_title', 'post_content', 'post_type', 'post_status', 'post_date', 'post_date_gmt', 'post_parent');
     public $user_keys = array('user_pass', 'user_login', 'user_nicename', 'user_url', 'user_email', 'display_name', 'nickname', 'first_name', 'last_name');
+    public $wpuwooimportexport_create_or_update_post_status = array(
+        'publish',
+        'private',
+        'future'
+    );
 
     public function __construct() {
     }
@@ -193,56 +198,59 @@ class WPUWooImportExport {
 
         $data = $this->prepare_post_data($data);
 
-        $args = array(
-            'posts_per_page' => 1,
-            'post_type' => $data['post_type'],
-            'post_status' => apply_filters('wpuwooimportexport_create_or_update_post_status', array(
-                'publish',
-                'private',
-                'future'
-            )),
-            'meta_query' => array(
-                'relation' => 'AND'
-            )
-        );
+        if (!isset($args['post_id'])) {
 
-        foreach ($search as $key => $value) {
-            $args['meta_query'][] = array(
-                'key' => $key,
-                'value' => $value,
-                'compare' => '='
+            $args = array(
+                'posts_per_page' => 1,
+                'post_type' => $data['post_type'],
+                'post_status' => apply_filters('wpuwooimportexport_create_or_update_post_status', $this->wpuwooimportexport_create_or_update_post_status),
+                'meta_query' => array(
+                    'relation' => 'AND'
+                )
             );
-        }
 
-        $uniqid_found = false;
-        if (isset($search['uniqid']) && $check_uniqid) {
-            $uniqid_type = is_numeric($search['uniqid']) ? '%d' : '%s';
-            if (isset($args['uniqid_type'])) {
-                $uniqid_type = $args['uniqid_type'];
+            foreach ($search as $key => $value) {
+                $args['meta_query'][] = array(
+                    'key' => $key,
+                    'value' => $value,
+                    'compare' => '='
+                );
             }
-            $v = $wpdb->get_var($wpdb->prepare("SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = %s AND meta_value = $uniqid_type LIMIT 0,1", 'uniqid', $search['uniqid']));
-            if (!is_null($v) && $v == $search['uniqid']) {
-                $uniqid_found = true;
-            }
-        }
 
-        $results = (($check_uniqid && $uniqid_found) || !$check_uniqid) ? get_posts($args) : array();
-
-        if (!$results || !isset($results[0])) {
-            $return = $this->create_post_from_data($data);
-            /* Cache uniqid "forever" */
+            $uniqid_found = false;
             if (isset($search['uniqid']) && $check_uniqid) {
-                wp_cache_set('wpuwoo_uniqid_' . $search['uniqid'], $return, '');
+                $uniqid_type = is_numeric($search['uniqid']) ? '%d' : '%s';
+                if (isset($args['uniqid_type'])) {
+                    $uniqid_type = $args['uniqid_type'];
+                }
+                $v = $wpdb->get_var($wpdb->prepare("SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = %s AND meta_value = $uniqid_type LIMIT 0,1", 'uniqid', $search['uniqid']));
+                if (!is_null($v) && $v == $search['uniqid']) {
+                    $uniqid_found = true;
+                }
             }
-            if ($get_status && is_numeric($return)) {
-                $return = array('created', $return);
+
+            $results = (($check_uniqid && $uniqid_found) || !$check_uniqid) ? get_posts($args) : array();
+
+            if (!$results || !isset($results[0])) {
+                $return = $this->create_post_from_data($data);
+                /* Cache uniqid "forever" */
+                if (isset($search['uniqid']) && $check_uniqid) {
+                    wp_cache_set('wpuwoo_uniqid_' . $search['uniqid'], $return, '');
+                }
+                if ($get_status && is_numeric($return)) {
+                    $return = array('created', $return);
+                }
+                return $return;
             }
-            return $return;
+
+            $data = apply_filters('wpuwooimportexport_create_or_update_post_data_before_update', $data);
+
+            $post_id = $results[0]->ID;
+        } else {
+            $post_id = $args['post_id'];
         }
 
-        $data = apply_filters('wpuwooimportexport_create_or_update_post_data_before_update', $data);
-
-        $return = $this->update_post_from_data($results[0]->ID, $data);
+        $return = $this->update_post_from_data($post_id, $data);
         if (is_numeric($return) && isset($search['uniqid']) && $check_uniqid) {
             wp_cache_set('wpuwoo_uniqid_' . $search['uniqid'], $return, '');
         }
@@ -270,6 +278,35 @@ class WPUWooImportExport {
         }
 
         return $post_id;
+    }
+
+    /* Index Uniqid
+    -------------------------- */
+
+    public function index_uniqid($uniqid, $post_type = false) {
+        $index = array();
+        global $wpdb;
+
+        $sql = $wpdb->prepare("SELECT post_id,meta_value FROM $wpdb->postmeta WHERE $wpdb->postmeta.meta_key = %s", $uniqid);
+        if ($post_type) {
+            $statuses = apply_filters('wpuwooimportexport_create_or_update_post_status', $this->wpuwooimportexport_create_or_update_post_status);
+            $statuses_sql = array();
+            foreach ($statuses as $status) {
+                $statuses_sql[] = "'" . esc_sql($status) . "'";
+            }
+            $sql .= " AND post_id IN (";
+            $sql .= $wpdb->prepare("SELECT ID FROM $wpdb->posts WHERE post_type=%s", $post_type);
+            $sql .= " AND post_status IN(" . implode(',', $statuses_sql) . ")";
+            $sql .= " )";
+        }
+
+        $results = $wpdb->get_results($sql);
+
+        foreach ($results as $item) {
+            $index[$item->meta_value] = $item->post_id;
+        }
+        unset($results);
+        return $index;
     }
 
     /* Prepare post datas
