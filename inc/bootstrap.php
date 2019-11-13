@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.35.5
+Version: 0.35.6
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -185,7 +185,7 @@ class WPUWooImportExport {
      * @param  boolean $get_status    Return an array composed of the status created / updated and the post id
      * @return mixed                  Post ID / array('new',int postid) / Error
      */
-    public function create_or_update_post_from_datas($data = array(), $search = array(), $check_uniqid = false, $get_status = false) {
+    public function create_or_update_post_from_datas($data = array(), $search = array(), $check_uniqid = false, $get_status = false, $args = array()) {
         global $wpdb;
         if (empty($search) || !is_array($search)) {
             return false;
@@ -217,7 +217,10 @@ class WPUWooImportExport {
         $uniqid_found = false;
         if (isset($search['uniqid']) && $check_uniqid) {
             $uniqid_type = is_numeric($search['uniqid']) ? '%d' : '%s';
-            $v = $wpdb->get_var($wpdb->prepare("SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = %s AND meta_value = $uniqid_type", 'uniqid', $search['uniqid']));
+            if (isset($args['uniqid_type'])) {
+                $uniqid_type = $args['uniqid_type'];
+            }
+            $v = $wpdb->get_var($wpdb->prepare("SELECT meta_value FROM $wpdb->postmeta WHERE meta_key = %s AND meta_value = $uniqid_type LIMIT 0,1", 'uniqid', $search['uniqid']));
             if (!is_null($v) && $v == $search['uniqid']) {
                 $uniqid_found = true;
             }
