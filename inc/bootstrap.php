@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.35.8
+Version: 0.36.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -30,15 +30,19 @@ if ($wpuwooimportexport_is_bootstraped) {
     define('WP_ADMIN', true);
     $_SERVER['PHP_SELF'] = '/wp-admin/index.php';
 
-    /* Load WordPress */
-    /* Thanks to http://boiteaweb.fr/wordpress-bootstraps-ou-comment-bien-charger-wordpress-6717.html */
-    chdir(dirname(__FILE__));
-    $bootstrap = 'wp-load.php';
-    while (!is_file($bootstrap)) {
-        if (is_dir('..') && getcwd() != '/') {
-            chdir('..');
-        } else {
-            die('EN: Could not find WordPress! FR : Impossible de trouver WordPress !');
+    if (defined('WPUTOOLS__WPLOAD_FILE')) {
+        $bootstrap = WPUTOOLS__WPLOAD_FILE;
+    } else {
+        /* Load WordPress */
+        /* Thanks to http://boiteaweb.fr/wordpress-bootstraps-ou-comment-bien-charger-wordpress-6717.html */
+        chdir(dirname(__FILE__));
+        $bootstrap = 'wp-load.php';
+        while (!is_file($bootstrap)) {
+            if (is_dir('..') && getcwd() != '/') {
+                chdir('..');
+            } else {
+                die('EN: Could not find WordPress! FR : Impossible de trouver WordPress !');
+            }
         }
     }
     require_once $bootstrap;
@@ -340,7 +344,15 @@ class WPUWooImportExport {
 
         foreach ($data as $key => $value) {
             if (substr($key, 0, 6) == 'term__') {
-                $data['terms'][substr($key, 6)] = $value;
+                $k = substr($key, 6);
+                if (!isset($data['terms'][$k])) {
+                    $data['terms'][$k] = array();
+                }
+                $value = explode(',', $value);
+                $value = array_map('trim', $value);
+                foreach ($value as $v) {
+                    $data['terms'][$k][] = $v;
+                }
             }
         }
 
