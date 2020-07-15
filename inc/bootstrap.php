@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.36.2
+Version: 0.36.3
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -1095,6 +1095,34 @@ class WPUWooImportExport {
         $file_contents = str_replace("\r", "\r\n", $file_contents);
         $file_contents = str_replace("\r\n\n", "\r\n", $file_contents);
         file_put_contents($csv_file, $file_contents);
+    }
+
+    /* Try to get a tmp CSV file from an upload */
+    public function get_csv_from_file_upload($file = array()) {
+
+        /* Check upload */
+        if ($file['error'] != '0') {
+            return false;
+        }
+
+        /* Check extension */
+        $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+        if ($ext != 'csv') {
+            return false;
+        }
+
+        /* Check mime type */
+        if (!in_array($file['type'], array(
+            'text/plain',
+            'application/vnd.ms-excel',
+            'text/csv',
+            'text/x-csv'
+        ))) {
+            return false;
+        }
+
+        /* Return tmp file */
+        return $file['tmp_name'];
     }
 
     /* ----------------------------------------------------------
