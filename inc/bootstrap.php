@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.36.3
+Version: 0.37.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -1023,6 +1023,27 @@ class WPUWooImportExport {
         $data = json_decode($raw_data, true);
         if (!is_array($data)) {
             error_log('Invalid JSON file :' . basename($json_file));
+            return false;
+        }
+        return $data;
+    }
+
+    public function get_datas_from_xml($xml_file) {
+        if (!file_exists($xml_file)) {
+            error_log('XML File do not exists');
+            return false;
+        }
+        $xml = simplexml_load_file($xml_file);
+        if (!$xml) {
+            error_log('Invalid XML file :' . basename($xml_file));
+            return false;
+        }
+        $data = array();
+        foreach ($xml->children() as $item) {
+            $data[] = array_change_key_case((array) $item, CASE_LOWER);
+        }
+        if (!is_array($data)) {
+            error_log('Invalid XML file :' . basename($xml_file));
             return false;
         }
         return $data;
