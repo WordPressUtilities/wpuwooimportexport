@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.38.0
+Version: 0.38.1
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -1271,7 +1271,7 @@ class WPUWooImportExport {
       Get from remote URL
     ---------------------------------------------------------- */
 
-    function get_from_remote_url($remote_url, $args = array(), $cache_settings = array()) {
+    public function get_from_remote_url($remote_url, $args = array(), $cache_settings = array()) {
 
         /* Default args */
         if (!is_array($args)) {
@@ -1279,35 +1279,36 @@ class WPUWooImportExport {
         }
 
         /* Cache settings */
-        if(!is_array($cache_settings)){
+        if (!is_array($cache_settings)) {
             $cache_settings = array();
         }
-        if(!isset($cache_settings['age'])){
+        if (!isset($cache_settings['age'])) {
             $cache_settings['age'] = 0;
         }
         $has_cache = $cache_settings['age'] > 0;
-        if(!isset($cache_settings['dir'])){
-            $cache_settings['dir'] = ABSPATH.'../cache/';
+        if (!isset($cache_settings['dir'])) {
+            $cache_settings['dir'] = ABSPATH . '../cache/';
         }
-        if(!isset($cache_settings['name'])){
-            $cache_settings['name'] = md5($remote_url.json_encode($args));
+        if (!isset($cache_settings['name'])) {
+            $cache_settings['name'] = md5($remote_url . json_encode($args));
         }
-        if($has_cache && !is_dir($cache_settings['dir'])){
+        if ($has_cache && !is_dir($cache_settings['dir'])) {
             mkdir($cache_settings['dir']);
         }
-        $cache_file = $cache_settings['dir'].$cache_settings['name'];
-        if($has_cache && file_exists($cache_file) && filemtime($cache_file) > time()-$cache_settings['age']){
+        $cache_file = $cache_settings['dir'] . $cache_settings['name'];
+        if ($has_cache && file_exists($cache_file) && filemtime($cache_file) > time() - $cache_settings['age']) {
             return file_get_contents($cache_file);
         }
 
         /* Making the call */
         $result_body = wp_remote_retrieve_body(wp_remote_get($remote_url, $args));
         if (!$result_body) {
+            $this->print_message('Error : Could not retrieve URL');
             return false;
         }
 
         /* Building cache */
-        if($has_cache){
+        if ($has_cache) {
             file_put_contents($cache_file, $result_body);
         }
 
