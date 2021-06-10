@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.38.1
+Version: 0.38.2
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -133,6 +133,12 @@ class WPUWooImportExport {
         if (!isset($data['metas']) || !is_array($data['metas'])) {
             $data['metas'] = array();
         }
+        if (!isset($data['args']) || !is_array($data['args'])) {
+            $data['args'] = array();
+        }
+        if (!isset($data['args']['name'])) {
+            $data['args']['name'] = $data['term_name'];
+        }
 
         /* Obtain post by uniqid */
         $args = array(
@@ -150,7 +156,7 @@ class WPUWooImportExport {
 
         /* Create term */
         if (empty($terms) || is_wp_error($terms)) {
-            $term = wp_insert_term($data['term_name'], $data['taxonomy']);
+            $term = wp_insert_term($data['term_name'], $data['taxonomy'], $data['args']);
             if (is_wp_error($term)) {
                 return false;
             }
@@ -171,9 +177,7 @@ class WPUWooImportExport {
             $_term_id = $terms[0]->term_id;
 
             /* Update term basic informations */
-            $term = wp_update_term($_term_id, $data['taxonomy'], array(
-                'name' => $data['term_name']
-            ));
+            $term = wp_update_term($_term_id, $data['taxonomy'], $data['args']);
             if (is_wp_error($term)) {
                 return false;
             }
