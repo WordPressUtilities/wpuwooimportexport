@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.38.2
+Version: 0.38.3
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -210,6 +210,10 @@ class WPUWooImportExport {
         }
 
         $data = $this->prepare_post_data($data);
+
+        if(!isset($data['metas']['uniqid']) && isset($search['uniqid'])){
+            $data['metas']['uniqid'] = $search['uniqid'];
+        }
 
         if (!isset($args['post_id'])) {
 
@@ -1300,14 +1304,17 @@ class WPUWooImportExport {
             mkdir($cache_settings['dir']);
         }
         $cache_file = $cache_settings['dir'] . $cache_settings['name'];
-        if ($has_cache && file_exists($cache_file) && filemtime($cache_file) > time() - $cache_settings['age']) {
+        if ($has_cache && file_exists($cache_file) && time() - filemtime($cache_file) < $cache_settings['age']) {
             return file_get_contents($cache_file);
         }
 
         /* Making the call */
-        $result_body = wp_remote_retrieve_body(wp_remote_get($remote_url, $args));
+        $response = wp_remote_get($remote_url, $args);
+        $result_body = wp_remote_retrieve_body($response);
         if (!$result_body) {
             $this->print_message('Error : Could not retrieve URL');
+            $this->print_message('- URL : ' . $remote_url);
+            $this->print_message('- Response : ' . json_encode($response));
             return false;
         }
 
