@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.38.3
+Version: 0.39.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -211,7 +211,7 @@ class WPUWooImportExport {
 
         $data = $this->prepare_post_data($data);
 
-        if(!isset($data['metas']['uniqid']) && isset($search['uniqid'])){
+        if (!isset($data['metas']['uniqid']) && isset($search['uniqid'])) {
             $data['metas']['uniqid'] = $search['uniqid'];
         }
 
@@ -927,7 +927,7 @@ class WPUWooImportExport {
             $args['post_status'] = 'any';
         }
 
-        /* Delete all */
+        /* Select all */
         $posts = get_posts(array(
             'fields' => 'ids',
             'post_type' => $post_type,
@@ -935,10 +935,57 @@ class WPUWooImportExport {
             'numberposts' => -1
         ));
         $total = count($posts);
+
+        if ($total < 1) {
+            $this->debug_message('No ' . $post_type . ' found', $args['debug_type']);
+            return true;
+        }
+
         foreach ($posts as $i => $post_item) {
             $message = ($i + 1) . '/' . $total . ' : Deleting post type ' . $post_type . ' #' . $post_item;
             wp_delete_post($post_item, true);
-            $this->debug_message($debug_message, $args['debug_type']);
+            $this->debug_message($message, $args['debug_type']);
+        }
+        return true;
+    }
+    /* ----------------------------------------------------------
+      DELETE ALL TAX TERMS
+    ---------------------------------------------------------- */
+
+    public function delete_tax($tax_slug = '', $args = array()) {
+        if (!$tax_slug) {
+            return false;
+        }
+
+        if (!is_array($args)) {
+            $args = array();
+        }
+        if (!isset($args['debug_type'])) {
+            $args['debug_type'] = 'log';
+        }
+
+        /* Select all */
+        $terms = get_terms(array(
+            'taxonomy' => $tax_slug,
+            'hide_empty' => false
+        ));
+
+        if(is_wp_error($terms)){
+            $this->debug_message($tax_slug . ' is not a valid tax', $args['debug_type']);
+            return true;
+        }
+
+        $total = count($terms);
+
+        if ($total < 1) {
+            $this->debug_message('No ' . $tax_slug . ' found', $args['debug_type']);
+            return true;
+        }
+
+        foreach ($terms as $i => $term_item) {
+            $message = ($i + 1) . '/' . $total . ' : Deleting term ' . $tax_slug . ' #' . $term_item->term_id;
+            wp_delete_term($term_item->term_id, $tax_slug);
+            $this->debug_message($message, $args['debug_type']);
         }
         return true;
     }
