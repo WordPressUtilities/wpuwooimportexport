@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.39.0
+Version: 0.40.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -397,6 +397,36 @@ class WPUWooImportExport {
 
         return $data;
 
+    }
+
+    /* ----------------------------------------------------------
+      Sync posts and link them via Polylang
+    ---------------------------------------------------------- */
+
+    public function sync_post_pll($uniqid, $languages = array()) {
+        if (!is_array($languages) || empty($languages)) {
+            $languages = array(
+                'fr' => array(),
+                'en' => array()
+            );
+        }
+
+        $posts = array();
+        foreach ($languages as $lang_id => $values) {
+            $lang_uniqid = $lang_id . '-' . $uniqid;
+            $post_id = $this->create_or_update_post_from_datas($values, array(
+                'uniqid' => $lang_uniqid
+            ));
+            update_post_meta($post_id, 'uniqid', $lang_uniqid);
+            pll_set_post_language($post_id, $lang_id);
+            $posts[$lang_id] = $post_id;
+        }
+
+        if (function_exists('pll_save_post_translations')) {
+            pll_save_post_translations($posts);
+        }
+
+        return $posts;
     }
 
     /* ----------------------------------------------------------
@@ -870,8 +900,15 @@ class WPUWooImportExport {
         /* If not found */
         if (!is_numeric($image_id) || $force) {
 
-            /* Upload image */
-            $image_id = $this->upload_file($file);
+            /* If the file happens to be an URL */
+            if (filter_var($file, FILTER_VALIDATE_URL) !== FALSE) {
+                require_once ABSPATH . 'wp-admin/includes/media.php';
+                require_once ABSPATH . 'wp-admin/includes/file.php';
+                require_once ABSPATH . 'wp-admin/includes/image.php';
+                $image_id = media_sideload_image($file, 0, '', 'id');
+            } else {
+                $image_id = $this->upload_file($file);
+            }
 
             /* Save reference name */
             add_post_meta($image_id, $meta_key, $reference_name);
@@ -970,7 +1007,7 @@ class WPUWooImportExport {
             'hide_empty' => false
         ));
 
-        if(is_wp_error($terms)){
+        if (is_wp_error($terms)) {
             $this->debug_message($tax_slug . ' is not a valid tax', $args['debug_type']);
             return true;
         }
