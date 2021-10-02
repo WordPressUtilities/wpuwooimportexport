@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.40.1
+Version: 0.40.2
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -863,6 +863,32 @@ class WPUWooImportExport {
             return $attachment_id;
         }
 
+    }
+
+    public function url_is_local_attachment($url) {
+
+        /* Check if url target attachments directory */
+        $upload_dir = wp_get_upload_dir();
+        $baseurl = $upload_dir['baseurl'];
+        $baseurl_len = strlen($baseurl);
+        if (substr($url, 0, $baseurl_len) != $baseurl) {
+            return false;
+        }
+
+        $url = str_replace($baseurl . '/', '', $url);
+
+        /* Thanks to https://core.trac.wordpress.org/ticket/41816#comment:7 */
+        /* Remove dimension from URL */
+        $url_nonumber = preg_replace('/-\d+[Xx]\d+\./', '.', $url);
+
+        /* Find attachment */
+        $att_id = attachment_url_to_postid($url_nonumber);
+        if ($att_id) {
+            return $att_id;
+        }
+        /* No attachment can be found, search scaled version */
+        $url_nonumber_noscaled = preg_replace('/-\d+[Xx]\d+\./', '-scaled.', $url);
+        return attachment_url_to_postid($url_nonumber_noscaled);
     }
 
     public function set_post_thumbnail_from_url($url, $post_id) {
