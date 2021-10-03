@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.40.2
+Version: 0.41.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: http://darklg.me/
@@ -862,12 +862,15 @@ class WPUWooImportExport {
         } else {
             return $attachment_id;
         }
-
     }
 
+    /**
+     * Check if an URL is already a local attachment
+     * @param  [type] $url [description]
+     * @return [type]      [description]
+     */
     public function url_is_local_attachment($url) {
 
-        /* Check if url target attachments directory */
         $upload_dir = wp_get_upload_dir();
         $baseurl = $upload_dir['baseurl'];
         $baseurl_len = strlen($baseurl);
@@ -875,36 +878,116 @@ class WPUWooImportExport {
             return false;
         }
 
+        /* Extract only the file path relative to the uploads dir */
         $url = str_replace($baseurl . '/', '', $url);
 
         /* Thanks to https://core.trac.wordpress.org/ticket/41816#comment:7 */
-        /* Remove dimension from URL */
+        /* Remove dimensions from URL */
         $url_nonumber = preg_replace('/-\d+[Xx]\d+\./', '.', $url);
 
-        /* Find attachment */
+        /* Look for the attachment */
         $att_id = attachment_url_to_postid($url_nonumber);
         if ($att_id) {
             return $att_id;
         }
+
         /* No attachment can be found, search scaled version */
         $url_nonumber_noscaled = preg_replace('/-\d+[Xx]\d+\./', '-scaled.', $url);
         return attachment_url_to_postid($url_nonumber_noscaled);
     }
 
-    public function set_post_thumbnail_from_url($url, $post_id) {
+    /**
+     * Set an URL as post thumbnail
+     * @param [type]  $url     [description]
+     * @param integer $post_id [description]
+     */
+    public function set_post_thumbnail_from_url($url, $post_id = 0) {
+
+        $image_id = $this->upload_image_from_url($url, $post_id);
+
+        // set image as the post thumbnail
+        if ($post_id) {
+            set_post_thumbnail($post_id, $image_id);
+        }
+
+        return $image_id;
+    }
+
+    /**
+     * Try to get the real image URL if it's hosted by a service
+     * @param  [type] $url [description]
+     * @return [type]      [description]
+     */
+    public function extract_real_image_url($url) {
+        if (!class_exists('DOMDocument')) {
+            return $url;
+        }
+        $url_parts = parse_url($url);
+        if (!isset($url_parts['host'])) {
+            return $url;
+        }
+        if ($url_parts['host'] == 'drive.google.com') {
+
+            $page_content = file_get_contents($url);
+
+            $dom_obj = new DOMDocument();
+            $dom_obj->loadHTML($page_content);
+            $meta_val = null;
+
+            foreach ($dom_obj->getElementsByTagName('meta') as $meta) {
+                if ($meta->getAttribute('property') == 'og:image') {
+                    $meta_val = $meta->getAttribute('content');
+                }
+
+                if ($meta->getAttribute('itemprop') == 'name') {
+                    $meta_name = $meta->getAttribute('content');
+                }
+            }
+
+            // Avoid Google Drive's resize
+            $meta_val_parts = explode('=', $meta_val);
+            if (!isset($meta_val_parts[0])) {
+                return false;
+            }
+            $url = $meta_val_parts[0];
+            if ($meta_name) {
+                $url .= '?' . $meta_name;
+            }
+        }
+        return $url;
+    }
+
+    /**
+     * Upload an image from an URL
+     * @param  [type]  $url     [description]
+     * @param  integer $post_id [description]
+     * @return [type]           [description]
+     */
+    public function upload_image_from_url($url, $post_id = 0) {
+        if (!$url) {
+            return 0;
+        }
+
+        // Clean URL
+        $url = $this->extract_real_image_url($url);
+
         // Add required classes
         require_once ABSPATH . 'wp-admin/includes/media.php';
         require_once ABSPATH . 'wp-admin/includes/file.php';
         require_once ABSPATH . 'wp-admin/includes/image.php';
 
         // Import image as an attachment
-        $image = media_sideload_image($url, $post_id, '', 'id');
-
-        // set image as the post thumbnail
-        set_post_thumbnail($post_id, $image);
-
+        return media_sideload_image($url, $post_id, '', 'id');
     }
 
+    /**
+     * Upload an image if it is not present in the media library
+     * @param  [type]  $file           [description]
+     * @param  boolean $reference_name [description]
+     * @param  boolean $meta_key       [description]
+     * @param  boolean $force          [description]
+     * @return [type]                  [description]
+     */
     public function upload_if_not_exists($file, $reference_name = false, $meta_key = false, $force = false) {
         global $wpdb;
         if (!$meta_key) {
@@ -930,10 +1013,7 @@ class WPUWooImportExport {
 
             /* If the file happens to be an URL */
             if (filter_var($file, FILTER_VALIDATE_URL) !== FALSE) {
-                require_once ABSPATH . 'wp-admin/includes/media.php';
-                require_once ABSPATH . 'wp-admin/includes/file.php';
-                require_once ABSPATH . 'wp-admin/includes/image.php';
-                $image_id = media_sideload_image($file, 0, '', 'id');
+                $image_id = $this->upload_image_from_url($file);
             } else {
                 $image_id = $this->upload_file($file);
             }
