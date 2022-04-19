@@ -1,7 +1,7 @@
 <?php
 
 /*
-* Posts v 0.3.7
+* Posts v 0.4.0
 */
 
 include dirname(__FILE__) . '/bootstrap.php';
@@ -115,14 +115,14 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
         }
 
         # Author
-        if (!is_numeric($post->post_author)) {
-            $author = get_user_by('slug', $post->post_author);
+        if (!is_numeric($post['post_author'])) {
+            $author = get_user_by('slug', $post['post_author']);
             if (is_object($author) && isset($author->data->ID)) {
-                $post->post_author = $author->data->ID;
-            } else if (is_string($post->post_author) && $options['create_nonexistant_author']) {
-                $user_id = wp_create_user($post->post_author);
+                $post['post_author'] = $author->data->ID;
+            } else if (is_string($post['post_author']) && $options['create_nonexistant_author']) {
+                $user_id = wp_create_user($post['post_author']);
                 if (is_numeric($user_id)) {
-                    $post->post_author = $user_id;
+                    $post['post_author'] = $user_id;
                 }
             }
         }
@@ -205,7 +205,7 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
             # CONVERT OLD ATT IDS NEW ATT IDS
             do {
                 if (empty($_attachments_link)) {
-                    return;
+                    continue;
                 }
 
                 $is_array = false;
@@ -245,7 +245,8 @@ class WPUWooImportExport_Posts extends WPUWooImportExport {
     public function get_upload_dir($post_id) {
         $upload_dir = wp_upload_dir();
         $dir = array();
-        $dir['full'] = $upload_dir['basedir'] . '/export/post/' . $post_id . '/';
+        $root_dir = apply_filters('wpuwooimportexport__posts__get_upload_dir__root', $upload_dir['basedir']);
+        $dir['full'] = $root_dir . '/export/post/' . $post_id . '/';
         $dir['files'] = $dir['full'] . 'files/';
         if (!is_dir($dir['full'])) {
             mkdir($dir['full'], 0755, 1);
