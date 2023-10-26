@@ -2,12 +2,12 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.43.0
+Version: 0.44.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
-Author URI: http://darklg.me/
+Author URI: https://darklg.me/
 License: MIT License
-License URI: http://opensource.org/licenses/MIT
+License URI: https://opensource.org/licenses/MIT
 */
 
 $wpuwooimportexport_is_bootstraped = !defined('ABSPATH');
@@ -188,8 +188,8 @@ class WPUWooImportExport {
             /* Ignore some errors which can be benign for our use */
             $ignored_errors_slugs = apply_filters('wpuwooimportexport__create_or_update_term_from_datas__ignored_errors_slugs', array());
             if (is_wp_error($term)) {
-                foreach($term->errors as $error_key => $error_content){
-                    if(!in_array($error_key, $ignored_errors_slugs)){
+                foreach ($term->errors as $error_key => $error_content) {
+                    if (!in_array($error_key, $ignored_errors_slugs)) {
                         return false;
                     }
                 }
@@ -440,6 +440,36 @@ class WPUWooImportExport {
         }
 
         return $posts;
+    }
+
+    /* ----------------------------------------------------------
+      Sync terms and link them via Polylang
+    ---------------------------------------------------------- */
+
+    public function sync_term_pll($uniqid, $languages = array()) {
+        if (!is_array($languages) || empty($languages)) {
+            $languages = array(
+                'fr' => array(),
+                'en' => array()
+            );
+        }
+
+        $terms = array();
+        foreach ($languages as $lang_id => $values) {
+            $values['term_name'] = $lang_id . '-' . $values['term_name'];
+            $term_item = $this->create_or_update_term_from_datas($values, array(
+                'uniqid' => $lang_id . '-' . $uniqid
+            ));
+            update_term_meta($term_item, 'uniqid', $lang_id . '-' . $uniqid);
+            pll_set_term_language($term_item, $lang_id);
+            $terms[$lang_id] = $term_item;
+        }
+
+        if (function_exists('pll_save_post_translations')) {
+            pll_save_term_translations($terms);
+        }
+
+        return $terms;
     }
 
     /* ----------------------------------------------------------
