@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.44.0
+Version: 0.44.1
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -589,7 +589,7 @@ class WPUWooImportExport {
             $csv = utf8_encode($csv);
         }
         $fpc = file_put_contents($export_file, $csv);
-        if (count($fpc)) {
+        if ($fpc) {
             echo "- Export : ok in " . $export_file . "\n";
         } else {
             echo "- Export : failed.\n";
