@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.44.3
+Version: 0.44.4
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -11,6 +11,16 @@ License URI: https://opensource.org/licenses/MIT
 */
 
 $wpuwooimportexport_is_bootstraped = !defined('ABSPATH');
+
+/* ----------------------------------------------------------
+  Check PHP version
+---------------------------------------------------------- */
+
+$min_php_version = '7.4';
+if (version_compare(phpversion(), $min_php_version, '<')) {
+    echo 'PHP ' . $min_php_version . ' is required.';
+    die;
+}
 
 /* ----------------------------------------------------------
   Load WordPress
@@ -1655,7 +1665,7 @@ class WPUWooImportExport {
         return $files;
     }
 
-    public function get_cli_args(){
+    public function get_cli_args() {
         global $argv;
         $args = array();
         foreach ($argv as $arg) {
