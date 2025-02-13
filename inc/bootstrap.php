@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.44.5
+Version: 0.44.6
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -11,6 +11,9 @@ License URI: https://opensource.org/licenses/MIT
 */
 
 $wpuwooimportexport_is_bootstraped = !defined('ABSPATH');
+if (!isset($wpuwooimportexport_emulate_wp_admin)) {
+    $wpuwooimportexport_emulate_wp_admin = true;
+}
 
 /* ----------------------------------------------------------
   Check PHP version
@@ -37,8 +40,10 @@ if ($wpuwooimportexport_is_bootstraped) {
     define('WP_USE_THEMES', false);
 
     /* Fix for qtranslate and other plugins */
-    define('WP_ADMIN', true);
-    $_SERVER['PHP_SELF'] = '/wp-admin/index.php';
+    if ($wpuwooimportexport_emulate_wp_admin) {
+        define('WP_ADMIN', true);
+        $_SERVER['PHP_SELF'] = '/wp-admin/index.php';
+    }
 
     if (defined('WPUWOO__WPLOAD_FILE') && file_exists(WPUWOO__WPLOAD_FILE)) {
         /*
@@ -123,15 +128,15 @@ class WPUWooImportExport {
     -------------------------- */
 
     /**
-     $term_id = $this->create_or_update_term_from_datas(array(
-         'term_name' => 'My Term',
-         'taxonomy' => 'category',
-         'metas' => array(
-             'my_meta_key' => 'Value'
-         )
-     ), array(
-         'uniqid' => '121234'
-     ));
+    $term_id = $this->create_or_update_term_from_datas(array(
+    'term_name' => 'My Term',
+    'taxonomy' => 'category',
+    'metas' => array(
+    'my_meta_key' => 'Value'
+    )
+    ), array(
+    'uniqid' => '121234'
+    ));
      */
 
     public function create_or_update_term_from_datas($data = array(), $search = array()) {
