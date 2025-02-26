@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.44.6
+Version: 0.45.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -1711,6 +1711,63 @@ class WPUWooImportExport {
             }
         }
         return $args;
+    }
+
+    /* ----------------------------------------------------------
+      SFTP
+    ---------------------------------------------------------- */
+
+    /**
+     * Copy a file to a SFTP server.
+     * @param string $filename The path to the file to be copied.
+     * @param array $sftp_infos An array containing the SFTP connection details.
+     * @return void
+     */
+    public function copy_file_to_sftp($filename, $sftp_infos = array()) {
+
+        /* Check for ssh2_sftp availability */
+        if (!function_exists('ssh2_sftp')) {
+            $this->print_message('The ssh2.sftp wrapper is not available.');
+            return false;
+        }
+        /* Check values */
+        if (!file_exists($filename)) {
+            $this->print_message('The file does not exist: ' . $filename);
+            return false;
+        }
+        if (!is_array($sftp_infos) || !isset($sftp_infos['host'], $sftp_infos['user'], $sftp_infos['pass'], $sftp_infos['dir'])) {
+            $this->print_message('SFTP infos are not valid');
+            return false;
+        }
+        if (!isset($sftp_infos['port']) || !$sftp_infos['port']) {
+            $sftp_infos['port'] = 22;
+        }
+
+        /* Init SFTP connection */
+        $sftp = ssh2_connect($sftp_infos['host'], $sftp_infos['port']);
+        ssh2_auth_password($sftp, $sftp_infos['user'], $sftp_infos['pass']);
+        $sftp_stream = ssh2_sftp($sftp);
+        $dir = "ssh2.sftp://{$sftp_stream}/{$sftp_infos['dir']}/";
+
+        $remote_stream = fopen($dir . basename($filename), 'w');
+        $local_stream = fopen($filename, 'r');
+
+        if (!$remote_stream) {
+            $this->print_message('Could not open remote file: ' . $filename);
+            return false;
+        }
+        if (!$local_stream) {
+            $this->print_message('Could not open local file: ' . $filename);
+            return false;
+        }
+
+        stream_copy_to_stream($local_stream, $remote_stream);
+
+        fclose($local_stream);
+        fclose($remote_stream);
+
+        return true;
+
     }
 
     /* ----------------------------------------------------------
