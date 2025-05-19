@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.45.3
+Version: 0.45.4
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -524,7 +524,7 @@ class WPUWooImportExport {
         foreach ($datas as $i => $data) {
 
             $ii = $i + 1;
-            $total = "${ii}/{$nb_posts}";
+            $total = "{$ii}/{$nb_posts}";
 
             $status = 'created';
             if (isset($data['uniqid'])) {
@@ -544,7 +544,7 @@ class WPUWooImportExport {
 
             /* Create post */
             if (is_numeric($post_id)) {
-                $this->debug_message($total . "\t - Post #${post_id} " . $status . " !", $settings['debug_type']);
+                $this->debug_message($total . "\t - Post #{$post_id} " . $status . " !", $settings['debug_type']);
             } else {
                 $this->debug_message($total . "\t - Post could not be created", $settings['debug_type']);
             }
