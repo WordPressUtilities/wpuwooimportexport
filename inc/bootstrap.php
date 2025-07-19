@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.45.4
+Version: 0.46.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -598,7 +598,7 @@ class WPUWooImportExport {
     -------------------------- */
 
     public function create_csv_from_datas($datas = array(), $export_file = 'test.csv', $delimiter = ",", $enclosure = '"', $columns = array(), $args = array()) {
-        if(!is_array($args)){
+        if (!is_array($args)) {
             $args = array();
         }
         $args = array_merge(array(
@@ -1294,6 +1294,52 @@ class WPUWooImportExport {
             return false;
         }
         return $data;
+    }
+
+    public function callback_datas_from_big_json($big_json, $args = array()) {
+
+        /* Test file */
+        if (!is_readable($big_json)) {
+            error_log('File not found: ' . $big_json);
+            return false;
+        }
+        $file_handle = fopen($big_json, 'r');
+        if (!$file_handle) {
+            error_log('Error opening file: ' . $big_json);
+            return false;
+        }
+
+        /* Check args */
+        if (!is_array($args)) {
+            $args = array();
+        }
+        if (!isset($args['callback']) || !is_callable($args['callback'])) {
+            error_log('Callback function not provided or not callable');
+            fclose($file_handle);
+            return false;
+        }
+
+        /* Parse file, line by line */
+        $tmp_json_content = '';
+        while (($line = fgets($file_handle)) !== false) {
+            $line_content = trim($line);
+            /* Start a new item if we encounter a '{' */
+            if ($line_content == '{') {
+                $tmp_json_content = $line_content;
+            /* If we encounter a '}' or '},' we complete the JSON object */
+            } elseif ($line_content == '}' || $line_content == '},') {
+                $tmp_json_content .= $line_content;
+                $tmp_json_content = rtrim($tmp_json_content, ',');
+                $json_data = json_decode($tmp_json_content, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    call_user_func($args['callback'], $json_data);
+                }
+                $tmp_json_content = '';
+            } else {
+                $tmp_json_content .= $line_content;
+            }
+        }
+        fclose($file_handle);
     }
 
     public function get_datas_from_xml($xml_file) {
