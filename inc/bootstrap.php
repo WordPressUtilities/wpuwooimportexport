@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.46.2
+Version: 0.46.3
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -1348,7 +1348,7 @@ class WPUWooImportExport {
             /* Start a new item if we encounter a '{' */
             if ($line_content == '{') {
                 $tmp_json_content = $line_content;
-            /* If we encounter a '}' or '},' we complete the JSON object */
+                /* If we encounter a '}' or '},' we complete the JSON object */
             } elseif ($line_content == '}' || $line_content == '},') {
                 $tmp_json_content .= $line_content;
                 $tmp_json_content = rtrim($tmp_json_content, ',');
@@ -1801,6 +1801,13 @@ class WPUWooImportExport {
                 $this->print_message('WPUWOOImportExport - Error : Missing blog_id.');
                 die;
             }
+
+            $blog_details = get_blog_details(intval($args['blog_id'], 10));
+            if (!$blog_details) {
+                $this->print_message('WPUWOOImportExport - Error : Blog ID ' . $args['blog_id'] . ' does not exist.');
+                die;
+            }
+
             switch_to_blog($args['blog_id']);
         }
 
