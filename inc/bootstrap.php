@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.46.3
+Version: 0.47.0
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -1797,6 +1797,16 @@ class WPUWooImportExport {
         }
 
         if (is_multisite()) {
+            if(isset($args['url'])) {
+                $blog_details = get_blog_details(array('domain' => $args['url']));
+                if (!$blog_details) {
+                    $this->print_message('WPUWOOImportExport - Error : Blog URL ' . $args['url'] . ' does not exist.');
+                    die;
+                }
+                switch_to_blog($blog_details->blog_id);
+                return;
+            }
+
             if (!isset($args['blog_id']) || !is_numeric($args['blog_id'])) {
                 $this->print_message('WPUWOOImportExport - Error : Missing blog_id.');
                 die;
