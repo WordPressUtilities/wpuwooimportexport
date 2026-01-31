@@ -2,7 +2,7 @@
 
 /*
 Name: WPU Woo Import/Export
-Version: 0.47.1
+Version: 0.47.2
 Description: A CLI utility to import/export orders & products in WooCommerce
 Author: Darklg
 Author URI: https://darklg.me/
@@ -426,6 +426,45 @@ class WPUWooImportExport {
 
         return $data;
 
+    }
+
+    /**
+     * Searches for a WordPress post by its slug or title.
+     *
+     * This function queries the database for a post whose slug (`post_name`) or title (`post_title`)
+     * matches the provided slug (partial matches allowed). It returns the first matching post object
+     * if found, or false otherwise.
+     *
+     * @param string $slug The slug or partial slug/title to search for.
+     * @param string $post_type The post type to search in (default is 'page').
+     * @return WP_Post|false The first matching WP_Post object if found, or false if no match is found.
+     */
+    function search_post_by_name($slug, $post_type = 'page') {
+        global $wpdb;
+        $like = '%' . $wpdb->esc_like($slug) . '%';
+        $page_ids = $wpdb->get_col($wpdb->prepare("
+            SELECT ID FROM $wpdb->posts
+            WHERE post_name LIKE %s OR post_title LIKE %s
+            AND post_type = %s
+            LIMIT 1
+        ", $like, $like, $post_type));
+
+        if (empty($page_ids)) {
+            return false;
+        }
+
+        $query = new WP_Query(array(
+            'post_type' => $post_type,
+            'posts_per_page' => 1,
+            'post_status' => array('publish', 'draft', 'pending', 'private', 'future'),
+            'post__in' => $page_ids
+        ));
+
+        if ($query->have_posts()) {
+            return $query->posts[0];
+        }
+
+        return false;
     }
 
     /* ----------------------------------------------------------
@@ -1798,7 +1837,7 @@ class WPUWooImportExport {
         }
 
         if (is_multisite()) {
-            if(isset($args['url'])) {
+            if (isset($args['url'])) {
                 $blog_details = get_blog_details(array('domain' => $args['url']));
                 if (!$blog_details) {
                     $this->print_message('WPUWOOImportExport - Error : Blog URL ' . $args['url'] . ' does not exist.');
